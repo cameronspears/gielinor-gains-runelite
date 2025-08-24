@@ -7,8 +7,6 @@ import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -19,21 +17,18 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private static final int CARD_WIDTH = 190;
     private static final int CARD_HEIGHT = 180;
     private final IconCache iconCache;
-    private final GielinorGainsConfig config;
     private List<GainsItem> items = new ArrayList<>();
-    private List<ItemCardPanel> cardPanels = new ArrayList<>();
+    private final List<ItemCardPanel> cardPanels = new ArrayList<>();
     private String sortBy = "score";
     private boolean ascending = false;
     private JComponent headerComponent;
     private JComponent statusComponent;
     private boolean loading = true;
-    private String loadingMessage = "Loading trading opportunities...";
     private Timer loadingTipTimer;
     private JLabel loadingTipLabel;
     
     public CardGridPanel(IconCache iconCache, GielinorGainsConfig config) {
         this.iconCache = iconCache;
-        this.config = config;
         
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -93,8 +88,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
     }
 
     /**
-     * Sets loading state to control whether to show a loading indicator
-     * instead of the empty-state message while data is being fetched.
+     * Sets loading state.
      */
     public void setLoading(boolean loading) {
         this.loading = loading;
@@ -102,32 +96,6 @@ public class CardGridPanel extends JPanel implements Scrollable {
             loadingTipTimer.stop();
         }
         updateLayout();
-    }
-    
-    /**
-     * Sets loading state with a custom loading message.
-     */
-    public void setLoading(boolean loading, String message) {
-        this.loading = loading;
-        this.loadingMessage = message != null ? message : "Loading trading opportunities...";
-        if (!loading && loadingTipTimer != null) {
-            loadingTipTimer.stop();
-        }
-        updateLayout();
-    }
-    
-    /**
-     * Gets the current sort field.
-     */
-    public String getSortBy() {
-        return sortBy;
-    }
-    
-    /**
-     * Gets the current sort direction.
-     */
-    public boolean isAscending() {
-        return ascending;
     }
     
     private void sortItems() {
@@ -172,6 +140,13 @@ public class CardGridPanel extends JPanel implements Scrollable {
         log.debug("Created {} card panels", cardPanels.size());
     }
     
+    private void addComponentWithSpacing(JComponent component) {
+        component.setAlignmentX(Component.CENTER_ALIGNMENT);
+        component.setMaximumSize(new Dimension(Integer.MAX_VALUE, component.getPreferredSize().height));
+        add(component);
+        add(Box.createRigidArea(new Dimension(0, CARD_SPACING)));
+    }
+    
     private void updateLayout() {
         removeAll();
         
@@ -198,10 +173,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
 
         // Optional header
         if (headerComponent != null) {
-            headerComponent.setAlignmentX(Component.CENTER_ALIGNMENT);
-            headerComponent.setMaximumSize(new Dimension(Integer.MAX_VALUE, headerComponent.getPreferredSize().height));
-            add(headerComponent);
-            add(Box.createRigidArea(new Dimension(0, CARD_SPACING)));
+            addComponentWithSpacing(headerComponent);
         }
         
         // Add all cards with spacing between them
@@ -219,10 +191,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
         // Optional status/footer
         add(Box.createRigidArea(new Dimension(0, CARD_SPACING)));
         if (statusComponent != null) {
-            statusComponent.setAlignmentX(Component.CENTER_ALIGNMENT);
-            statusComponent.setMaximumSize(new Dimension(Integer.MAX_VALUE, statusComponent.getPreferredSize().height));
-            add(statusComponent);
-            add(Box.createRigidArea(new Dimension(0, CARD_SPACING)));
+            addComponentWithSpacing(statusComponent);
         }
 
         // Add spacing at bottom
@@ -313,7 +282,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
         int[] showAtMs = {0, 3000, 9000, 15000}; // 0s, 3s, 9s, 15s
         
         loadingTipTimer = new Timer(500, new java.awt.event.ActionListener() {
-            private long startTime = System.currentTimeMillis();
+            private final long startTime = System.currentTimeMillis();
             private int currentTip = 0;
             
             @Override
@@ -351,41 +320,6 @@ public class CardGridPanel extends JPanel implements Scrollable {
         loadingTipTimer.start();
     }
     
-    /**
-     * Returns the number of items currently displayed.
-     */
-    public int getItemCount() {
-        return items.size();
-    }
-    
-    /**
-     * Clears all items and cards.
-     */
-    public void clearItems() {
-        items.clear();
-        cardPanels.clear();
-        removeAll();
-        revalidate();
-        repaint();
-    }
-    
-    /**
-     * Gets a copy of the current items list.
-     */
-    public List<GainsItem> getItems() {
-        return new ArrayList<>(items);
-    }
-    
-    /**
-     * Refreshes the display by recreating card panels.
-     * Useful when configuration changes affect card rendering.
-     */
-    public void refreshDisplay() {
-        if (!items.isEmpty()) {
-            createCardPanels();
-            updateLayout();
-        }
-    }
     
     // Scrollable interface implementation for better scrolling behavior
     @Override

@@ -227,22 +227,18 @@ public class GainsPanel extends PluginPanel {
         setLoading(true);
         loadStartTime = System.currentTimeMillis();
         
-        String loadingMessage;
         if (forceRefresh) {
-            loadingMessage = "Fetching fresh market data...";
             statusLabel.setText("Fetching fresh data...");
             refreshButton.setText("●");
             refreshButton.setToolTipText("Fetching fresh data...");
         } else if (apiClient.hasCachedData()) {
-            loadingMessage = "Loading recent data...";
             statusLabel.setText("Loading...");
         } else {
-            loadingMessage = "Loading latest prices and volumes...";
             statusLabel.setText("Loading market data...");
         }
         
-        // Mark the grid as loading with context-aware message
-        cardGridPanel.setLoading(true, loadingMessage);
+        // Mark the grid as loading
+        cardGridPanel.setLoading(true);
         refreshButton.setEnabled(false);
         
         apiClient.fetchItems(200, config.minScore(), forceRefresh)
