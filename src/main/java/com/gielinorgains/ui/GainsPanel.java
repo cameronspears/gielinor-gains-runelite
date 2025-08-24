@@ -15,7 +15,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class GainsPanel extends PluginPanel {
@@ -218,11 +217,7 @@ public class GainsPanel extends PluginPanel {
     private void loadData() {
         refreshData(false);
     }
-    
-    private void refreshData() {
-        refreshData(false);
-    }
-    
+
     private void refreshData(boolean forceRefresh) {
         setLoading(true);
         loadStartTime = System.currentTimeMillis();
