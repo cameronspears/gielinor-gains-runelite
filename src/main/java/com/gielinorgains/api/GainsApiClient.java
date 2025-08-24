@@ -27,6 +27,7 @@ public class GainsApiClient {
     private final Gson gson;
     private ApiResponse cachedResponse;
     private long lastFetchTime;
+    private boolean lastRequestWasCached;
     
     @Inject
     public GainsApiClient() {
@@ -43,9 +44,14 @@ public class GainsApiClient {
     }
     
     public CompletableFuture<ApiResponse> fetchItems(int limit, double minScore) {
-        // Check cache first
-        if (isCacheValid()) {
+        return fetchItems(limit, minScore, false);
+    }
+    
+    public CompletableFuture<ApiResponse> fetchItems(int limit, double minScore, boolean forceRefresh) {
+        // Check cache first (unless force refresh is requested)
+        if (!forceRefresh && isCacheValid()) {
             log.debug("Returning cached items data");
+            lastRequestWasCached = true;
             return CompletableFuture.completedFuture(filterResponse(cachedResponse, limit, minScore));
         }
         
@@ -87,6 +93,7 @@ public class GainsApiClient {
                     // Cache the response
                     cachedResponse = apiResponse;
                     lastFetchTime = System.currentTimeMillis();
+                    lastRequestWasCached = false;
                     
                     log.info("Successfully fetched {} items", dto.data.size());
                     return filterResponse(apiResponse, limit, minScore);
@@ -142,5 +149,18 @@ public class GainsApiClient {
     public void clearCache() {
         cachedResponse = null;
         lastFetchTime = 0;
+        lastRequestWasCached = false;
+    }
+    
+    public boolean wasLastRequestCached() {
+        return lastRequestWasCached;
+    }
+    
+    public long getLastFetchTime() {
+        return lastFetchTime;
+    }
+    
+    public boolean hasCachedData() {
+        return cachedResponse != null;
     }
 }

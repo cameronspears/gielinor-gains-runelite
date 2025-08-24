@@ -27,6 +27,7 @@ public class GainsPanel extends PluginPanel {
     private JButton sortOrderButton;
     private JLabel statusLabel;
     private JProgressBar loadingBar;
+    private long loadStartTime;
     
     @Inject
     public GainsPanel(GainsApiClient apiClient, GielinorGainsConfig config) {
@@ -89,7 +90,7 @@ public class GainsPanel extends PluginPanel {
         refreshButton.setPreferredSize(new Dimension(24, 24));
         refreshButton.setFont(refreshButton.getFont().deriveFont(14f));
         refreshButton.setToolTipText("Refresh data");
-        refreshButton.addActionListener(e -> refreshData());
+        refreshButton.addActionListener(e -> refreshData(true));
         refreshPanel.add(refreshButton);
         
         topRow.add(logoPanel, BorderLayout.WEST);
@@ -176,17 +177,36 @@ public class GainsPanel extends PluginPanel {
     }
     
     private void loadData() {
-        refreshData();
+        refreshData(false);
     }
     
     private void refreshData() {
+        refreshData(false);
+    }
+    
+    private void refreshData(boolean forceRefresh) {
         setLoading(true);
-        // Also mark the grid as loading so it doesn't show the empty state
-        cardGridPanel.setLoading(true);
-        statusLabel.setText("Fetching data...");
+        loadStartTime = System.currentTimeMillis();
+        
+        String loadingMessage;
+        if (forceRefresh) {
+            loadingMessage = "Fetching fresh data...";
+            statusLabel.setText("Fetching fresh data...");
+            refreshButton.setText("●");
+            refreshButton.setToolTipText("Fetching fresh data...");
+        } else if (apiClient.hasCachedData()) {
+            loadingMessage = "Loading cached data...";
+            statusLabel.setText("Loading...");
+        } else {
+            loadingMessage = "Connecting to server...";
+            statusLabel.setText("Connecting to server...");
+        }
+        
+        // Mark the grid as loading with context-aware message
+        cardGridPanel.setLoading(true, loadingMessage);
         refreshButton.setEnabled(false);
         
-        apiClient.fetchItems(config.itemLimit(), config.minScore())
+        apiClient.fetchItems(config.itemLimit(), config.minScore(), forceRefresh)
             .thenAccept(this::handleApiResponse)
             .exceptionally(this::handleApiError);
     }
@@ -195,11 +215,21 @@ public class GainsPanel extends PluginPanel {
         SwingUtilities.invokeLater(() -> {
             setLoading(false);
             refreshButton.setEnabled(true);
+            refreshButton.setText("R");
+            refreshButton.setToolTipText("Refresh data");
             
             if (response.isSuccess() && response.getData() != null) {
                 cardGridPanel.setItems(response.getData());
-                statusLabel.setText(String.format("Loaded %d items", response.getData().size()));
-                log.info("Successfully loaded {} items", response.getData().size());
+                
+                long elapsedMs = System.currentTimeMillis() - loadStartTime;
+                String timeText = elapsedMs > 1000 ? String.format(" (%.1fs)", elapsedMs / 1000.0) : "";
+                
+                String cacheStatus = apiClient.wasLastRequestCached() ? " • Cached" : " • Fresh";
+                
+                statusLabel.setText(String.format("Loaded %d items%s%s", 
+                    response.getData().size(), timeText, cacheStatus));
+                
+                log.info("Successfully loaded {} items{}", response.getData().size(), timeText);
             } else {
                 String error = response.getError() != null ? response.getError() : "Unknown error";
                 statusLabel.setText("Error: " + error);
@@ -213,6 +243,9 @@ public class GainsPanel extends PluginPanel {
         SwingUtilities.invokeLater(() -> {
             setLoading(false);
             refreshButton.setEnabled(true);
+            refreshButton.setText("R");
+            refreshButton.setToolTipText("Refresh data");
+            
             String error = throwable.getMessage() != null ? throwable.getMessage() : "Unknown error";
             statusLabel.setText("Error: " + error);
             log.error("API request failed", throwable);

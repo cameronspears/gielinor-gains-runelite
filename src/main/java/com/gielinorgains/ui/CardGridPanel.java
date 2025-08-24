@@ -28,6 +28,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private JComponent headerComponent;
     private JComponent statusComponent;
     private boolean loading = true;
+    private String loadingMessage = "Loading trading opportunities...";
     
     public CardGridPanel(IconCache iconCache, GielinorGainsConfig config) {
         this.iconCache = iconCache;
@@ -92,6 +93,15 @@ public class CardGridPanel extends JPanel implements Scrollable {
      */
     public void setLoading(boolean loading) {
         this.loading = loading;
+        updateLayout();
+    }
+    
+    /**
+     * Sets loading state with a custom loading message.
+     */
+    public void setLoading(boolean loading, String message) {
+        this.loading = loading;
+        this.loadingMessage = message != null ? message : "Loading trading opportunities...";
         updateLayout();
     }
     
@@ -255,7 +265,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
         loadingPanel.setOpaque(false);
         loadingPanel.setLayout(new BoxLayout(loadingPanel, BoxLayout.Y_AXIS));
 
-        JLabel loadingLabel = new JLabel("Loading trading opportunities...");
+        JLabel loadingLabel = new JLabel(loadingMessage);
         loadingLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
         loadingLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         loadingLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
