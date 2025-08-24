@@ -156,17 +156,12 @@ public class ItemCardPanel extends JPanel {
             g2.fillRect(x, y, iconSize, iconSize);
         }
         
-        // Item name
+        // Item name with wrapping
         g2.setColor(TEXT_PRIMARY);
         g2.setFont(new Font("SansSerif", Font.BOLD, 11));
         FontMetrics fm = g2.getFontMetrics();
         
-        // Truncate name if too long
-        String name = item.getName();
-        String displayName = truncateText(name, fm, CARD_WIDTH - iconSize - PADDING * 2 - 30);
-        g2.drawString(displayName, x + iconSize + 8, y + 14);
-        
-        // Score indicator (colored dot + score text)
+        // Score indicator (colored dot + score text) - position first to reserve space
         int scoreX = CARD_WIDTH - PADDING - 35;
         
         // Score dot
@@ -179,12 +174,22 @@ public class ItemCardPanel extends JPanel {
         g2.setFont(new Font("Monospaced", Font.BOLD, 10));
         g2.drawString(String.format("%.1f", item.getScore()), scoreX + 12, y + 12);
         
-        return y + iconSize + 12;
+        // Draw item name with wrapping support
+        g2.setColor(TEXT_PRIMARY);
+        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        fm = g2.getFontMetrics();
+        
+        String name = item.getName();
+        int maxWidth = scoreX - (x + iconSize + 8) - 8; // Space between icon and score
+        int nameY = drawWrappedText(g2, name, x + iconSize + 8, y + 14, maxWidth, fm);
+        
+        // Return position after the name area, allowing more space for wrapped text
+        return Math.max(y + iconSize + 12, nameY + 8);
     }
     
     private int drawPriceSection(Graphics2D g2, int startY) {
         int x = PADDING;
-        int y = startY;
+        int y = startY + 8; // Add more space from header
         int sectionHeight = 40;
         int sectionWidth = CARD_WIDTH - PADDING * 2;
         
@@ -199,7 +204,7 @@ public class ItemCardPanel extends JPanel {
         
         g2.setColor(TEXT_PRIMARY);
         g2.setFont(new Font("Monospaced", Font.BOLD, 10));
-        String buyPrice = formatFullPrice(item.getAdjustedLowPrice()) + " gp";
+        String buyPrice = formatFullPrice(item.getAdjustedLowPrice());
         g2.drawString(buyPrice, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(buyPrice), y + 14);
         
         // Sell price
@@ -209,7 +214,7 @@ public class ItemCardPanel extends JPanel {
         
         g2.setColor(TEXT_PRIMARY);
         g2.setFont(new Font("Monospaced", Font.BOLD, 10));
-        String sellPrice = formatFullPrice(item.getAdjustedHighPrice()) + " gp";
+        String sellPrice = formatFullPrice(item.getAdjustedHighPrice());
         g2.drawString(sellPrice, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(sellPrice), y + 30);
         
         return y + sectionHeight + 8;
@@ -217,7 +222,7 @@ public class ItemCardPanel extends JPanel {
     
     private int drawStatsSection(Graphics2D g2, int startY) {
         int x = PADDING;
-        int y = startY;
+        int y = startY + 4; // Add a bit more space from price section
         int sectionHeight = 55;
         int sectionWidth = CARD_WIDTH - PADDING * 2;
         
@@ -225,17 +230,10 @@ public class ItemCardPanel extends JPanel {
         g2.setColor(STATS_BG);
         g2.fillRoundRect(x, y, sectionWidth, sectionHeight, 8, 8);
         
-        // Profit (highlighted)
-        // Coin icon (simple circle with $)
-        g2.setColor(PROFIT_GOLD);
-        g2.fillOval(x + 8, y + 8, 12, 12);
-        g2.setColor(Color.BLACK);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 8));
-        g2.drawString("gp", x + 10, y + 17);
-        
+        // Profit
         g2.setColor(TEXT_PRIMARY);
         g2.setFont(new Font("SansSerif", Font.BOLD, 11));
-        g2.drawString("Profit", x + 25, y + 18);
+        g2.drawString("Profit", x + 8, y + 18);
         
         g2.setColor(TEXT_PRIMARY);
         g2.setFont(new Font("Monospaced", Font.BOLD, 12));
@@ -243,14 +241,9 @@ public class ItemCardPanel extends JPanel {
         g2.drawString(profitText, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(profitText), y + 18);
         
         // Quantity
-        // Hash icon
-        g2.setColor(TEXT_SECONDARY);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 10));
-        g2.drawString("#", x + 8, y + 38);
-        
         g2.setColor(TEXT_SECONDARY);
         g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        g2.drawString("Quantity", x + 20, y + 38);
+        g2.drawString("Quantity", x + 8, y + 38);
         
         g2.setColor(TEXT_PRIMARY);
         g2.setFont(new Font("Monospaced", Font.BOLD, 10));
@@ -291,6 +284,53 @@ public class ItemCardPanel extends JPanel {
         }
         
         return ellipsis;
+    }
+    
+    /**
+     * Draws text with word wrapping support, returns the Y position after the last line
+     */
+    private int drawWrappedText(Graphics2D g2, String text, int x, int startY, int maxWidth, FontMetrics fm) {
+        if (fm.stringWidth(text) <= maxWidth) {
+            // Text fits on one line
+            g2.drawString(text, x, startY);
+            return startY;
+        }
+        
+        // Need to wrap text
+        String[] words = text.split(" ");
+        StringBuilder currentLine = new StringBuilder();
+        int currentY = startY;
+        int lineHeight = fm.getHeight();
+        
+        for (String word : words) {
+            String testLine = currentLine.length() == 0 ? word : currentLine + " " + word;
+            
+            if (fm.stringWidth(testLine) <= maxWidth) {
+                // Word fits on current line
+                currentLine = new StringBuilder(testLine);
+            } else {
+                // Need to start new line
+                if (currentLine.length() > 0) {
+                    g2.drawString(currentLine.toString(), x, currentY);
+                    currentY += lineHeight;
+                }
+                currentLine = new StringBuilder(word);
+                
+                // Check if single word is too long
+                if (fm.stringWidth(word) > maxWidth) {
+                    String truncated = truncateText(word, fm, maxWidth);
+                    g2.drawString(truncated, x, currentY);
+                    return currentY;
+                }
+            }
+        }
+        
+        // Draw the last line
+        if (currentLine.length() > 0) {
+            g2.drawString(currentLine.toString(), x, currentY);
+        }
+        
+        return currentY;
     }
     
     public GainsItem getItem() {

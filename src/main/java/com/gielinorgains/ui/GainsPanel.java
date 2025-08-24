@@ -50,22 +50,8 @@ public class GainsPanel extends PluginPanel {
         // Card grid panel (will host header + cards + status and scroll as one)
         cardGridPanel = new CardGridPanel(iconCache, config);
         cardGridPanel.setHeaderAndStatus(headerPanel, statusPanel);
-
-        JScrollPane scrollPane = new JScrollPane(cardGridPanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(50);
-        scrollPane.getVerticalScrollBar().setBlockIncrement(150);
-        scrollPane.setWheelScrollingEnabled(true);
-        scrollPane.setBorder(null);
-        scrollPane.getViewport().setScrollMode(JViewport.SIMPLE_SCROLL_MODE);
-
-        // Ensure scroll works when hovering over header/status components
-        java.awt.event.MouseWheelListener wheelForwarder = e -> scrollPane.dispatchEvent(SwingUtilities.convertMouseEvent((Component) e.getSource(), e, scrollPane));
-        headerPanel.addMouseWheelListener(wheelForwarder);
-        statusPanel.addMouseWheelListener(wheelForwarder);
-
-        add(scrollPane, BorderLayout.CENTER);
+        // Add directly; let RuneLite's outer scroll handle scrolling
+        add(cardGridPanel, BorderLayout.CENTER);
     }
     
     private JPanel createHeaderPanel() {
@@ -73,8 +59,12 @@ public class GainsPanel extends PluginPanel {
         headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         
-        // Top section: Logo
-        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        // Top row: Logo left, Refresh button right
+        JPanel topRow = new JPanel(new BorderLayout());
+        topRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        
+        // Left side: Logo
+        JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         logoPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         
         ImageIcon logoIcon = LogoLoader.getLogoIcon();
@@ -88,52 +78,55 @@ public class GainsPanel extends PluginPanel {
             logoPanel.add(titleLabel);
         }
         
-        // Bottom section: Controls stacked vertically
-        JPanel controlsPanel = new JPanel(new GridLayout(2, 1, 0, 4));
-        controlsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        // Right side: Refresh button (icon only)
+        JPanel refreshPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        refreshPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         
-        // First row: Sort controls
+        refreshButton = new JButton("R");
+        refreshButton.setBackground(new Color(61, 125, 223));
+        refreshButton.setForeground(Color.WHITE);
+        refreshButton.setFocusPainted(false);
+        refreshButton.setPreferredSize(new Dimension(24, 24));
+        refreshButton.setFont(refreshButton.getFont().deriveFont(14f));
+        refreshButton.setToolTipText("Refresh data");
+        refreshButton.addActionListener(e -> refreshData());
+        refreshPanel.add(refreshButton);
+        
+        topRow.add(logoPanel, BorderLayout.WEST);
+        topRow.add(refreshPanel, BorderLayout.EAST);
+        
+        // Second row: Sort controls centered
         JPanel sortPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 0));
         sortPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         
         JLabel sortLabel = new JLabel("Sort:");
         sortLabel.setForeground(Color.WHITE);
-        sortLabel.setFont(sortLabel.getFont().deriveFont(10f));
+        sortLabel.setFont(sortLabel.getFont().deriveFont(12f));
         sortPanel.add(sortLabel);
         
         sortComboBox = new JComboBox<>(SORT_OPTIONS);
         sortComboBox.setSelectedItem("Score");
         sortComboBox.setPreferredSize(new Dimension(70, 20));
-        sortComboBox.setFont(sortComboBox.getFont().deriveFont(10f));
+        sortComboBox.setFont(sortComboBox.getFont().deriveFont(12f));
         sortComboBox.addActionListener(e -> updateSorting());
         sortPanel.add(sortComboBox);
         
-        sortOrderButton = new JButton("↓");
+        sortOrderButton = new JButton("v");
         sortOrderButton.setPreferredSize(new Dimension(20, 20));
-        sortOrderButton.setFont(sortOrderButton.getFont().deriveFont(10f));
+        sortOrderButton.setFont(sortOrderButton.getFont().deriveFont(12f));
         sortOrderButton.setFocusPainted(false);
         sortOrderButton.setToolTipText("Sort order: Descending");
         sortOrderButton.addActionListener(e -> toggleSortOrder());
         sortPanel.add(sortOrderButton);
         
-        // Second row: Refresh button
-        JPanel refreshPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        refreshPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        // Layout the header
+        JPanel headerContent = new JPanel(new BorderLayout());
+        headerContent.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        headerContent.add(topRow, BorderLayout.NORTH);
+        headerContent.add(Box.createVerticalStrut(4), BorderLayout.CENTER);
+        headerContent.add(sortPanel, BorderLayout.SOUTH);
         
-        refreshButton = new JButton("Refresh");
-        refreshButton.setBackground(new Color(61, 125, 223));
-        refreshButton.setForeground(Color.WHITE);
-        refreshButton.setFocusPainted(false);
-        refreshButton.setPreferredSize(new Dimension(80, 20));
-        refreshButton.setFont(refreshButton.getFont().deriveFont(10f));
-        refreshButton.addActionListener(e -> refreshData());
-        refreshPanel.add(refreshButton);
-        
-        controlsPanel.add(sortPanel);
-        controlsPanel.add(refreshPanel);
-        
-        headerPanel.add(logoPanel, BorderLayout.NORTH);
-        headerPanel.add(controlsPanel, BorderLayout.CENTER);
+        headerPanel.add(headerContent, BorderLayout.CENTER);
         
         return headerPanel;
     }
@@ -166,17 +159,17 @@ public class GainsPanel extends PluginPanel {
         String selectedSort = (String) sortComboBox.getSelectedItem();
         if (selectedSort != null) {
             String sortField = selectedSort.toLowerCase();
-            boolean ascending = sortOrderButton.getText().equals("↑");
+            boolean ascending = sortOrderButton.getText().equals("^");
             cardGridPanel.setSorting(sortField, ascending);
             log.debug("Updated sorting to: {} ({})", sortField, ascending ? "ascending" : "descending");
         }
     }
     
     private void toggleSortOrder() {
-        boolean currentAscending = sortOrderButton.getText().equals("↑");
+        boolean currentAscending = sortOrderButton.getText().equals("^");
         boolean newAscending = !currentAscending;
         
-        sortOrderButton.setText(newAscending ? "↑" : "↓");
+        sortOrderButton.setText(newAscending ? "^" : "v");
         sortOrderButton.setToolTipText("Sort order: " + (newAscending ? "Ascending" : "Descending"));
         
         updateSorting();
@@ -188,6 +181,8 @@ public class GainsPanel extends PluginPanel {
     
     private void refreshData() {
         setLoading(true);
+        // Also mark the grid as loading so it doesn't show the empty state
+        cardGridPanel.setLoading(true);
         statusLabel.setText("Fetching data...");
         refreshButton.setEnabled(false);
         

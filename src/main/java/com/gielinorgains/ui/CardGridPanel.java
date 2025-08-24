@@ -27,6 +27,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private boolean ascending = false;
     private JComponent headerComponent;
     private JComponent statusComponent;
+    private boolean loading = true;
     
     public CardGridPanel(IconCache iconCache, GielinorGainsConfig config) {
         this.iconCache = iconCache;
@@ -68,6 +69,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
      */
     public void setItems(List<GainsItem> newItems) {
         this.items = new ArrayList<>(newItems);
+        this.loading = false;
         sortItems();
         createCardPanels();
         updateLayout();
@@ -81,6 +83,15 @@ public class CardGridPanel extends JPanel implements Scrollable {
         this.ascending = ascending;
         sortItems();
         createCardPanels(); // Re-create panels after sorting
+        updateLayout();
+    }
+
+    /**
+     * Sets loading state to control whether to show a loading indicator
+     * instead of the empty-state message while data is being fetched.
+     */
+    public void setLoading(boolean loading) {
+        this.loading = loading;
         updateLayout();
     }
     
@@ -140,6 +151,14 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private void updateLayout() {
         removeAll();
         
+        if (loading) {
+            log.debug("Showing loading state");
+            showLoadingState();
+            revalidate();
+            repaint();
+            return;
+        }
+
         if (cardPanels.isEmpty()) {
             log.debug("No card panels to display, showing empty state");
             // Show empty state
@@ -215,6 +234,45 @@ public class CardGridPanel extends JPanel implements Scrollable {
         add(hintLabel);
         
         // Add flexible space to push content up
+        add(Box.createVerticalGlue());
+    }
+
+    private void showLoadingState() {
+        // Add spacing at top
+        add(Box.createRigidArea(new Dimension(0, 20)));
+
+        // Gielinor Gains logo
+        ImageIcon logoIcon = LogoLoader.getLogoIcon();
+        if (logoIcon != null) {
+            JLabel logoLabel = new JLabel(logoIcon);
+            logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            add(logoLabel);
+            add(Box.createRigidArea(new Dimension(0, 16)));
+        }
+
+        // Loading indicator centered
+        JPanel loadingPanel = new JPanel();
+        loadingPanel.setOpaque(false);
+        loadingPanel.setLayout(new BoxLayout(loadingPanel, BoxLayout.Y_AXIS));
+
+        JLabel loadingLabel = new JLabel("Loading trading opportunities...");
+        loadingLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        loadingLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        loadingLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JProgressBar bar = new JProgressBar();
+        bar.setIndeterminate(true);
+        bar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        bar.setMaximumSize(new Dimension(200, 12));
+
+        loadingPanel.add(loadingLabel);
+        loadingPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+        loadingPanel.add(bar);
+
+        loadingPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        add(loadingPanel);
+
+        // Flexible space
         add(Box.createVerticalGlue());
     }
     
