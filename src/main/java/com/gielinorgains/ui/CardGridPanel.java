@@ -7,6 +7,7 @@ import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
 import java.awt.*;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -231,12 +232,26 @@ public class CardGridPanel extends JPanel implements Scrollable {
         // Add spacing at top
         add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Gielinor Gains logo
+        // Gielinor Gains logo (clickable)
         ImageIcon logoIcon = LogoLoader.getLogoIcon();
         if (logoIcon != null) {
+            JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+            logoPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            logoPanel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            logoPanel.setToolTipText("Visit GielinorGains.com");
+            logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            
+            // Add click listener to logo panel
+            logoPanel.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    openWebsite();
+                }
+            });
+            
             JLabel logoLabel = new JLabel(logoIcon);
-            logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-            add(logoLabel);
+            logoPanel.add(logoLabel);
+            add(logoPanel);
             add(Box.createRigidArea(new Dimension(0, 20)));
         }
 
@@ -318,6 +333,15 @@ public class CardGridPanel extends JPanel implements Scrollable {
         });
         
         loadingTipTimer.start();
+    }
+    
+    private void openWebsite() {
+        try {
+            Desktop.getDesktop().browse(URI.create("https://gielinorgains.com"));
+            log.debug("Opened GielinorGains.com website");
+        } catch (Exception e) {
+            log.error("Failed to open website", e);
+        }
     }
     
     
