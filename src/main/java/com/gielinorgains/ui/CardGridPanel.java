@@ -18,7 +18,6 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private static final int CARD_SPACING = 6;
     private static final int CARD_WIDTH = 190;
     private static final int CARD_HEIGHT = 180;
-    
     private final IconCache iconCache;
     private final GielinorGainsConfig config;
     private List<GainsItem> items = new ArrayList<>();
@@ -29,6 +28,8 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private JComponent statusComponent;
     private boolean loading = true;
     private String loadingMessage = "Loading trading opportunities...";
+    private Timer loadingTipTimer;
+    private JLabel loadingTipLabel;
     
     public CardGridPanel(IconCache iconCache, GielinorGainsConfig config) {
         this.iconCache = iconCache;
@@ -54,7 +55,9 @@ public class CardGridPanel extends JPanel implements Scrollable {
     
     @Override
     public Dimension getPreferredSize() {
+        // Calculate height based on actual card panels
         int height = cardPanels.size() * (CARD_HEIGHT + CARD_SPACING) + CARD_SPACING;
+        
         // Account for optional header and status components and surrounding spacing
         if (headerComponent != null) {
             height += headerComponent.getPreferredSize().height + CARD_SPACING;
@@ -74,6 +77,8 @@ public class CardGridPanel extends JPanel implements Scrollable {
         sortItems();
         createCardPanels();
         updateLayout();
+        
+        log.info("Set {} items, created {} card panels", items.size(), cardPanels.size());
     }
     
     /**
@@ -83,7 +88,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
         this.sortBy = sortBy;
         this.ascending = ascending;
         sortItems();
-        createCardPanels(); // Re-create panels after sorting
+        createCardPanels();
         updateLayout();
     }
 
@@ -93,6 +98,9 @@ public class CardGridPanel extends JPanel implements Scrollable {
      */
     public void setLoading(boolean loading) {
         this.loading = loading;
+        if (!loading && loadingTipTimer != null) {
+            loadingTipTimer.stop();
+        }
         updateLayout();
     }
     
@@ -102,6 +110,9 @@ public class CardGridPanel extends JPanel implements Scrollable {
     public void setLoading(boolean loading, String message) {
         this.loading = loading;
         this.loadingMessage = message != null ? message : "Loading trading opportunities...";
+        if (!loading && loadingTipTimer != null) {
+            loadingTipTimer.stop();
+        }
         updateLayout();
     }
     
@@ -145,11 +156,14 @@ public class CardGridPanel extends JPanel implements Scrollable {
         }
     }
     
+    /**
+     * Creates card panels for all items
+     */
     private void createCardPanels() {
         // Clear existing panels
         cardPanels.clear();
         
-        // Create new card panels
+        // Create new card panels for all items
         for (GainsItem item : items) {
             ItemCardPanel cardPanel = new ItemCardPanel(item, iconCache);
             cardPanels.add(cardPanel);
@@ -171,7 +185,6 @@ public class CardGridPanel extends JPanel implements Scrollable {
 
         if (cardPanels.isEmpty()) {
             log.debug("No card panels to display, showing empty state");
-            // Show empty state
             showEmptyState();
             revalidate();
             repaint();
@@ -186,19 +199,16 @@ public class CardGridPanel extends JPanel implements Scrollable {
         // Optional header
         if (headerComponent != null) {
             headerComponent.setAlignmentX(Component.CENTER_ALIGNMENT);
-            // Ensure header stretches to viewport width
             headerComponent.setMaximumSize(new Dimension(Integer.MAX_VALUE, headerComponent.getPreferredSize().height));
             add(headerComponent);
             add(Box.createRigidArea(new Dimension(0, CARD_SPACING)));
         }
         
-        // Add cards with spacing between them
+        // Add all cards with spacing between them
         for (int i = 0; i < cardPanels.size(); i++) {
             ItemCardPanel card = cardPanels.get(i);
             card.setAlignmentX(Component.CENTER_ALIGNMENT);
             add(card);
-            
-            log.debug("Added card {} for item: {}", i, card.getItem().getName());
             
             // Add spacing between cards (but not after the last one)
             if (i < cardPanels.size() - 1) {
@@ -221,8 +231,9 @@ public class CardGridPanel extends JPanel implements Scrollable {
         revalidate();
         repaint();
         
-        log.info("Updated layout with {} cards in single column", cardPanels.size());
+        log.info("Updated layout with {} cards", cardPanels.size());
     }
+    
     
     private void showEmptyState() {
         // Add spacing at top
@@ -249,7 +260,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
 
     private void showLoadingState() {
         // Add spacing at top
-        add(Box.createRigidArea(new Dimension(0, 20)));
+        add(Box.createRigidArea(new Dimension(0, 30)));
 
         // Gielinor Gains logo
         ImageIcon logoIcon = LogoLoader.getLogoIcon();
@@ -257,33 +268,87 @@ public class CardGridPanel extends JPanel implements Scrollable {
             JLabel logoLabel = new JLabel(logoIcon);
             logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             add(logoLabel);
-            add(Box.createRigidArea(new Dimension(0, 16)));
+            add(Box.createRigidArea(new Dimension(0, 20)));
         }
 
-        // Loading indicator centered
-        JPanel loadingPanel = new JPanel();
-        loadingPanel.setOpaque(false);
-        loadingPanel.setLayout(new BoxLayout(loadingPanel, BoxLayout.Y_AXIS));
+        // Skip the static loading message - using rotating tips instead
 
-        JLabel loadingLabel = new JLabel(loadingMessage);
-        loadingLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-        loadingLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        loadingLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        // Main rotating loading message
+        loadingTipLabel = new JLabel("Loading latest prices and volumes...");
+        loadingTipLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        loadingTipLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        loadingTipLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        add(loadingTipLabel);
 
+        add(Box.createRigidArea(new Dimension(0, 16)));
+
+        // Progress bar
         JProgressBar bar = new JProgressBar();
         bar.setIndeterminate(true);
         bar.setAlignmentX(Component.CENTER_ALIGNMENT);
-        bar.setMaximumSize(new Dimension(200, 12));
+        bar.setMaximumSize(new Dimension(180, 10));
+        bar.setPreferredSize(new Dimension(180, 10));
+        add(bar);
 
-        loadingPanel.add(loadingLabel);
-        loadingPanel.add(Box.createRigidArea(new Dimension(0, 6)));
-        loadingPanel.add(bar);
+        // Start rotating tips
+        startLoadingTips();
 
-        loadingPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        add(loadingPanel);
-
-        // Flexible space
+        // Flexible space to center content
         add(Box.createVerticalGlue());
+    }
+    
+    private void startLoadingTips() {
+        if (loadingTipTimer != null) {
+            loadingTipTimer.stop();
+        }
+        
+        String[] tips = {
+            "Loading latest prices and volumes...",
+            "Loading timeseries data...",
+            "Calculating scores...",
+            "Determining quantities and offers..."
+        };
+        
+        // Cumulative timing: when each message should appear
+        int[] showAtMs = {0, 3000, 9000, 15000}; // 0s, 3s, 9s, 15s
+        
+        loadingTipTimer = new Timer(500, new java.awt.event.ActionListener() {
+            private long startTime = System.currentTimeMillis();
+            private int currentTip = 0;
+            
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (loadingTipLabel == null || !loading) {
+                    loadingTipTimer.stop();
+                    return;
+                }
+                
+                long elapsed = System.currentTimeMillis() - startTime;
+                
+                // Check if we should advance to the next tip
+                int nextTip = currentTip;
+                for (int i = currentTip + 1; i < showAtMs.length; i++) {
+                    if (elapsed >= showAtMs[i]) {
+                        nextTip = i;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // Update the message if we've advanced
+                if (nextTip != currentTip) {
+                    currentTip = nextTip;
+                    loadingTipLabel.setText(tips[currentTip]);
+                }
+                
+                // Stop after showing the final message for a bit
+                if (currentTip == tips.length - 1 && elapsed >= 19000) {
+                    loadingTipTimer.stop();
+                }
+            }
+        });
+        
+        loadingTipTimer.start();
     }
     
     /**
@@ -353,4 +418,5 @@ public class CardGridPanel extends JPanel implements Scrollable {
     public boolean getScrollableTracksViewportHeight() {
         return false; // Panel height should be independent of viewport height
     }
+    
 }

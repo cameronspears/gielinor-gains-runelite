@@ -31,13 +31,43 @@ public class ItemCardPanel extends JPanel {
     private static final Color STATS_BG = new Color(55, 55, 65);       // Slightly lighter background
     private static final Color PROFIT_GOLD = new Color(255, 215, 0);   // Brighter gold
     
+    // Cached fonts for better performance
+    private static final Font HEADER_FONT = new Font("SansSerif", Font.BOLD, 11);
+    private static final Font SCORE_FONT = new Font("Monospaced", Font.BOLD, 10);
+    private static final Font PRICE_LABEL_FONT = new Font("SansSerif", Font.PLAIN, 9);
+    private static final Font PRICE_VALUE_FONT = new Font("Monospaced", Font.BOLD, 10);
+    private static final Font STATS_LABEL_FONT = new Font("SansSerif", Font.PLAIN, 10);
+    private static final Font STATS_VALUE_FONT = new Font("Monospaced", Font.BOLD, 10);
+    private static final Font PROFIT_FONT = new Font("Monospaced", Font.BOLD, 12);
+    
+    // Cache commonly used strokes and shapes
+    private static final BasicStroke BORDER_STROKE = new BasicStroke(2f);
+    private static final RenderingHints RENDERING_HINTS;
+    
+    static {
+        RENDERING_HINTS = new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        RENDERING_HINTS.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+    }
+    
     private final GainsItem item;
     private final IconCache iconCache;
     private boolean isHovered = false;
     
+    // Cache formatted values to avoid repeated computation
+    private final String formattedBuyPrice;
+    private final String formattedSellPrice;
+    private final String formattedProfit;
+    private final String formattedScore;
+    
     public ItemCardPanel(GainsItem item, IconCache iconCache) {
         this.item = item;
         this.iconCache = iconCache;
+        
+        // Pre-compute and cache formatted values
+        this.formattedBuyPrice = formatFullPrice(item.getAdjustedLowPrice());
+        this.formattedSellPrice = formatFullPrice(item.getAdjustedHighPrice());
+        this.formattedProfit = formatPrice(item.getProfit());
+        this.formattedScore = String.format("%.1f", item.getScore());
         
         setPreferredSize(new Dimension(CARD_WIDTH, CARD_HEIGHT));
         setMinimumSize(new Dimension(CARD_WIDTH, CARD_HEIGHT));
@@ -98,9 +128,8 @@ public class ItemCardPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g.create();
         
         try {
-            // Enable antialiasing for smooth rendering
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            // Apply cached rendering hints
+            g2.setRenderingHints(RENDERING_HINTS);
             
             // Draw card background with rounded corners
             RoundRectangle2D cardShape = new RoundRectangle2D.Float(1, 1, getWidth()-2, getHeight()-2, CORNER_RADIUS, CORNER_RADIUS);
@@ -111,7 +140,7 @@ public class ItemCardPanel extends JPanel {
             
             // Border with hover effect
             g2.setColor(isHovered ? CARD_HOVER : CARD_BORDER);
-            g2.setStroke(new BasicStroke(2f)); // Make border more visible
+            g2.setStroke(BORDER_STROKE); // Use cached stroke
             g2.draw(cardShape);
             
             // Draw hover effect (slight elevation simulation)
@@ -146,8 +175,8 @@ public class ItemCardPanel extends JPanel {
         int x = PADDING;
         int y = startY;
         
-        // Draw item icon with callback to repaint when loaded
-        ImageIcon icon = iconCache.getIcon(item.getIcon(), this::repaint);
+        // Draw item icon with callback to repaint when loaded (high priority for visible cards)
+        ImageIcon icon = iconCache.getIcon(item.getIcon(), this::repaint, true);
         if (icon != null) {
             g2.drawImage(icon.getImage(), x, y, iconSize, iconSize, null);
         } else {
@@ -171,12 +200,12 @@ public class ItemCardPanel extends JPanel {
         
         // Score text
         g2.setColor(TEXT_SECONDARY);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 10));
-        g2.drawString(String.format("%.1f", item.getScore()), scoreX + 12, y + 12);
+        g2.setFont(SCORE_FONT);
+        g2.drawString(formattedScore, scoreX + 12, y + 12);
         
         // Draw item name with wrapping support
         g2.setColor(TEXT_PRIMARY);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setFont(HEADER_FONT);
         fm = g2.getFontMetrics();
         
         String name = item.getName();
@@ -199,23 +228,21 @@ public class ItemCardPanel extends JPanel {
         
         // Buy price
         g2.setColor(TEXT_SECONDARY);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        g2.setFont(PRICE_LABEL_FONT);
         g2.drawString("Buy", x + 8, y + 14);
         
         g2.setColor(TEXT_PRIMARY);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 10));
-        String buyPrice = formatFullPrice(item.getAdjustedLowPrice());
-        g2.drawString(buyPrice, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(buyPrice), y + 14);
+        g2.setFont(PRICE_VALUE_FONT);
+        g2.drawString(formattedBuyPrice, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(formattedBuyPrice), y + 14);
         
         // Sell price
         g2.setColor(TEXT_SECONDARY);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
+        g2.setFont(PRICE_LABEL_FONT);
         g2.drawString("Sell", x + 8, y + 30);
         
         g2.setColor(TEXT_PRIMARY);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 10));
-        String sellPrice = formatFullPrice(item.getAdjustedHighPrice());
-        g2.drawString(sellPrice, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(sellPrice), y + 30);
+        g2.setFont(PRICE_VALUE_FONT);
+        g2.drawString(formattedSellPrice, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(formattedSellPrice), y + 30);
         
         return y + sectionHeight + 8;
     }
@@ -232,21 +259,20 @@ public class ItemCardPanel extends JPanel {
         
         // Profit
         g2.setColor(TEXT_PRIMARY);
-        g2.setFont(new Font("SansSerif", Font.BOLD, 11));
+        g2.setFont(HEADER_FONT);
         g2.drawString("Profit", x + 8, y + 18);
         
         g2.setColor(TEXT_PRIMARY);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 12));
-        String profitText = formatPrice(item.getProfit());
-        g2.drawString(profitText, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(profitText), y + 18);
+        g2.setFont(PROFIT_FONT);
+        g2.drawString(formattedProfit, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(formattedProfit), y + 18);
         
         // Quantity
         g2.setColor(TEXT_SECONDARY);
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        g2.setFont(STATS_LABEL_FONT);
         g2.drawString("Quantity", x + 8, y + 38);
         
         g2.setColor(TEXT_PRIMARY);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 10));
+        g2.setFont(STATS_VALUE_FONT);
         String qtyText = String.valueOf(item.getQuantity());
         g2.drawString(qtyText, x + sectionWidth - 8 - g2.getFontMetrics().stringWidth(qtyText), y + 38);
         

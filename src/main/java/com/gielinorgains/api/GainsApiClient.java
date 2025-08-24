@@ -57,7 +57,7 @@ public class GainsApiClient {
         
         return CompletableFuture.supplyAsync(() -> {
             try {
-                String url = API_BASE_URL + ITEMS_ENDPOINT + "?limit=" + Math.max(limit, 100);
+                String url = API_BASE_URL + ITEMS_ENDPOINT + "?limit=" + limit;
                 
                 Request request = new Request.Builder()
                     .url(url)

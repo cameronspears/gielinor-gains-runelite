@@ -18,16 +18,6 @@ public interface GielinorGainsConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "itemLimit",
-		name = "Items to Display",
-		description = "Maximum number of items to display in the table"
-	)
-	default int itemLimit()
-	{
-		return 50;
-	}
-
-	@ConfigItem(
 		keyName = "minScore",
 		name = "Minimum Score",
 		description = "Only show items with score >= this value (0-5)"

@@ -39,7 +39,6 @@ GielinorGainsPlugin.java       # Main entry point, RuneLite integration
 
 GielinorGainsConfig.java       # Configuration interface
 ├─ refreshInterval()           # API call frequency (default: 90s)
-├─ itemLimit()                # Max items to display (default: 50)
 ├─ minScore()                 # Score filter threshold (default: 0.0)
 └─ showIcons()                # Icon display toggle (default: true)
 ```
@@ -195,6 +194,8 @@ if (config.newSetting()) {
 }
 ```
 
+**Note**: The item count is hardcoded to 200 items to match the website behavior and is not configurable.
+
 ### Adding New API Fields
 1. Update `GainsItem.java` with new field
 2. Ensure correct data type (check API response manually)
@@ -274,7 +275,7 @@ The next major feature will integrate with Gielinor Gains Planner:
 ### Performance Considerations
 - Icon cache is bounded (500 items max)
 - API responses cached for 90s
-- Table rendering optimized for 50-100 items
+- Table rendering optimized for up to 200 items (hardcoded limit, typically returns ~110)
 - Background threads for all network operations
 
 ### Code Style

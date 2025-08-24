@@ -11,6 +11,10 @@ import net.runelite.client.ui.PluginPanel;
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.net.URI;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Slf4j
@@ -26,6 +30,7 @@ public class GainsPanel extends PluginPanel {
     private JComboBox<String> sortComboBox;
     private JButton sortOrderButton;
     private JLabel statusLabel;
+    private JLabel websiteLink;
     private JProgressBar loadingBar;
     private long loadStartTime;
     
@@ -64,9 +69,19 @@ public class GainsPanel extends PluginPanel {
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         
-        // Left side: Logo
+        // Left side: Logo (clickable)
         JPanel logoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         logoPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        logoPanel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        logoPanel.setToolTipText("Visit GielinorGains.com");
+        
+        // Add click listener to logo panel
+        logoPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                openWebsite();
+            }
+        });
         
         ImageIcon logoIcon = LogoLoader.getLogoIcon();
         if (logoIcon != null) {
@@ -141,12 +156,36 @@ public class GainsPanel extends PluginPanel {
         statusLabel.setForeground(Color.WHITE);
         statusLabel.setFont(statusLabel.getFont().deriveFont(11f));
         
+        // Website link
+        websiteLink = new JLabel("GielinorGains.com");
+        websiteLink.setForeground(new Color(61, 125, 223)); // Brand blue color
+        websiteLink.setFont(websiteLink.getFont().deriveFont(10f));
+        websiteLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        websiteLink.setToolTipText("Visit GielinorGains.com");
+        websiteLink.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                openWebsite();
+            }
+            
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                websiteLink.setText("<html><u>GielinorGains.com</u></html>");
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                websiteLink.setText("GielinorGains.com");
+            }
+        });
+        
         loadingBar = new JProgressBar();
         loadingBar.setIndeterminate(true);
         loadingBar.setVisible(false);
         loadingBar.setPreferredSize(new Dimension(0, 15));
         
         statusPanel.add(statusLabel, BorderLayout.WEST);
+        statusPanel.add(websiteLink, BorderLayout.EAST);
         statusPanel.add(loadingBar, BorderLayout.SOUTH);
         
         return statusPanel;
@@ -190,23 +229,23 @@ public class GainsPanel extends PluginPanel {
         
         String loadingMessage;
         if (forceRefresh) {
-            loadingMessage = "Fetching fresh data...";
+            loadingMessage = "Fetching fresh market data...";
             statusLabel.setText("Fetching fresh data...");
             refreshButton.setText("●");
             refreshButton.setToolTipText("Fetching fresh data...");
         } else if (apiClient.hasCachedData()) {
-            loadingMessage = "Loading cached data...";
+            loadingMessage = "Loading recent data...";
             statusLabel.setText("Loading...");
         } else {
-            loadingMessage = "Connecting to server...";
-            statusLabel.setText("Connecting to server...");
+            loadingMessage = "Loading latest prices and volumes...";
+            statusLabel.setText("Loading market data...");
         }
         
         // Mark the grid as loading with context-aware message
         cardGridPanel.setLoading(true, loadingMessage);
         refreshButton.setEnabled(false);
         
-        apiClient.fetchItems(config.itemLimit(), config.minScore(), forceRefresh)
+        apiClient.fetchItems(200, config.minScore(), forceRefresh)
             .thenAccept(this::handleApiResponse)
             .exceptionally(this::handleApiError);
     }
@@ -219,17 +258,10 @@ public class GainsPanel extends PluginPanel {
             refreshButton.setToolTipText("Refresh data");
             
             if (response.isSuccess() && response.getData() != null) {
-                cardGridPanel.setItems(response.getData());
+                // Progressive loading: show first batch immediately, then load the rest
+                progressivelyLoadItems(response.getData());
                 
-                long elapsedMs = System.currentTimeMillis() - loadStartTime;
-                String timeText = elapsedMs > 1000 ? String.format(" (%.1fs)", elapsedMs / 1000.0) : "";
-                
-                String cacheStatus = apiClient.wasLastRequestCached() ? " • Cached" : " • Fresh";
-                
-                statusLabel.setText(String.format("Loaded %d items%s%s", 
-                    response.getData().size(), timeText, cacheStatus));
-                
-                log.info("Successfully loaded {} items{}", response.getData().size(), timeText);
+                log.info("Successfully started loading {} items", response.getData().size());
             } else {
                 String error = response.getError() != null ? response.getError() : "Unknown error";
                 statusLabel.setText("Error: " + error);
@@ -237,6 +269,71 @@ public class GainsPanel extends PluginPanel {
                 showErrorDialog("Failed to load data: " + error);
             }
         });
+    }
+    
+    /**
+     * Loads items progressively for smooth UI population
+     */
+    private void progressivelyLoadItems(List<GainsItem> items) {
+        if (items.isEmpty()) {
+            cardGridPanel.setItems(items);
+            return;
+        }
+        
+        // Show first batch immediately for instant feedback
+        int firstBatchSize = Math.min(30, items.size());
+        List<GainsItem> firstBatch = items.subList(0, firstBatchSize);
+        cardGridPanel.setItems(firstBatch);
+        
+        // If there are more items, load them progressively
+        if (items.size() > firstBatchSize) {
+            loadRemainingItemsProgressively(items, firstBatchSize);
+        }
+        
+        log.debug("Started progressive loading: {} items total, {} shown immediately", 
+            items.size(), firstBatchSize);
+    }
+    
+    private void loadRemainingItemsProgressively(List<GainsItem> allItems, int startIndex) {
+        final int batchSize = 40;
+        final int delay = 80; // milliseconds between batches
+        
+        Timer progressiveTimer = new Timer(delay, null);
+        progressiveTimer.addActionListener(new java.awt.event.ActionListener() {
+            private int currentIndex = startIndex;
+            
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                int endIndex = Math.min(currentIndex + batchSize, allItems.size());
+                
+                // Create progressive list with items up to current batch
+                List<GainsItem> progressiveItems = allItems.subList(0, endIndex);
+                cardGridPanel.setItems(progressiveItems);
+                
+                // Update status to show progress
+                statusLabel.setText(String.format("Loading items... (%d of %d)", 
+                    endIndex, allItems.size()));
+                
+                currentIndex = endIndex;
+                
+                // Stop when all items are loaded
+                if (currentIndex >= allItems.size()) {
+                    progressiveTimer.stop();
+                    
+                    // Final status update
+                    long elapsedMs = System.currentTimeMillis() - loadStartTime;
+                    String timeText = elapsedMs > 1000 ? String.format(" (%.1fs)", elapsedMs / 1000.0) : "";
+                    String cacheStatus = apiClient.wasLastRequestCached() ? " • Cached" : " • Fresh";
+                    
+                    statusLabel.setText(String.format("Loaded %d items%s%s", 
+                        allItems.size(), timeText, cacheStatus));
+                    
+                    log.debug("Progressive loading completed: {} items", allItems.size());
+                }
+            }
+        });
+        
+        progressiveTimer.start();
     }
     
     private Void handleApiError(Throwable throwable) {
@@ -263,6 +360,15 @@ public class GainsPanel extends PluginPanel {
     
     private void showErrorDialog(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+    
+    private void openWebsite() {
+        try {
+            Desktop.getDesktop().browse(URI.create("https://gielinorgains.com"));
+            log.debug("Opened GielinorGains.com website");
+        } catch (Exception e) {
+            log.error("Failed to open website", e);
+        }
     }
     
 }
