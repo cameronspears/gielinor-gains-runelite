@@ -146,8 +146,8 @@ public class ItemCardPanel extends JPanel {
         int x = PADDING;
         int y = startY;
         
-        // Draw item icon
-        ImageIcon icon = iconCache.getIcon(item.getIcon());
+        // Draw item icon with callback to repaint when loaded
+        ImageIcon icon = iconCache.getIcon(item.getIcon(), this::repaint);
         if (icon != null) {
             g2.drawImage(icon.getImage(), x, y, iconSize, iconSize, null);
         } else {

@@ -29,6 +29,10 @@ public class IconCache {
     }
     
     public ImageIcon getIcon(String iconUrl) {
+        return getIcon(iconUrl, null);
+    }
+    
+    public ImageIcon getIcon(String iconUrl, Runnable onLoadCallback) {
         if (iconUrl == null || iconUrl.isEmpty()) {
             return null;
         }
@@ -42,14 +46,14 @@ public class IconCache {
         
         // Start loading the icon asynchronously if not already loading
         if (entry == null || entry.isExpired()) {
-            loadIconAsync(iconUrl);
+            loadIconAsync(iconUrl, onLoadCallback);
         }
         
         // Return existing icon if available, null otherwise
         return entry != null ? entry.icon : null;
     }
     
-    private void loadIconAsync(String iconUrl) {
+    private void loadIconAsync(String iconUrl, Runnable onLoadCallback) {
         CompletableFuture.supplyAsync(() -> {
             try {
                 log.debug("Loading icon from: {}", iconUrl);
@@ -58,11 +62,34 @@ public class IconCache {
                 BufferedImage image = ImageIO.read(url);
                 
                 if (image != null) {
-                    // Resize image to standard icon size
+                    // Calculate dimensions that preserve aspect ratio within ICON_SIZE bounds
+                    int originalWidth = image.getWidth();
+                    int originalHeight = image.getHeight();
+                    
+                    double aspectRatio = (double) originalWidth / originalHeight;
+                    int scaledWidth, scaledHeight;
+                    
+                    if (originalWidth > originalHeight) {
+                        // Wider than tall - constrain by width
+                        scaledWidth = ICON_SIZE;
+                        scaledHeight = (int) (ICON_SIZE / aspectRatio);
+                    } else {
+                        // Taller than wide or square - constrain by height
+                        scaledHeight = ICON_SIZE;
+                        scaledWidth = (int) (ICON_SIZE * aspectRatio);
+                    }
+                    
+                    // Create transparent canvas at standard icon size
                     BufferedImage resized = new BufferedImage(ICON_SIZE, ICON_SIZE, BufferedImage.TYPE_INT_ARGB);
                     Graphics2D g2d = resized.createGraphics();
                     g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    g2d.drawImage(image, 0, 0, ICON_SIZE, ICON_SIZE, null);
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    
+                    // Center the scaled image within the canvas
+                    int x = (ICON_SIZE - scaledWidth) / 2;
+                    int y = (ICON_SIZE - scaledHeight) / 2;
+                    
+                    g2d.drawImage(image, x, y, scaledWidth, scaledHeight, null);
                     g2d.dispose();
                     
                     ImageIcon icon = new ImageIcon(resized);
@@ -76,6 +103,12 @@ public class IconCache {
                     }
                     
                     log.debug("Successfully cached icon for: {}", iconUrl);
+                    
+                    // Invoke callback on EDT to trigger repaint
+                    if (onLoadCallback != null) {
+                        SwingUtilities.invokeLater(onLoadCallback);
+                    }
+                    
                     return icon;
                 }
             } catch (IOException e) {
