@@ -74,7 +74,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
         createCardPanels();
         updateLayout();
         
-        log.info("Set {} items, created {} card panels", items.size(), cardPanels.size());
+        log.debug("Set {} items, created {} card panels", items.size(), cardPanels.size());
     }
     
     /**
@@ -201,7 +201,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
         revalidate();
         repaint();
         
-        log.info("Updated layout with {} cards", cardPanels.size());
+        log.debug("Updated layout with {} cards", cardPanels.size());
     }
     
     
@@ -348,7 +348,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
      * Cleanup resources when the panel is destroyed
      */
     public void shutdown() {
-        log.info("Shutting down CardGridPanel");
+        log.debug("Shutting down CardGridPanel");
         
         // Stop any running loading tip timer
         if (loadingTipTimer != null && loadingTipTimer.isRunning()) {

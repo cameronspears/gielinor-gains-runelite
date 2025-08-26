@@ -64,7 +64,7 @@ public class LogoLoader {
                     g2d.drawImage(originalLogo, x, y, scaledWidth, scaledHeight, null);
                     g2d.dispose();
                     
-                    log.info("Successfully loaded and scaled Gielinor Gains logo");
+                    log.debug("Successfully loaded and scaled Gielinor Gains logo");
                     return scaledLogo;
                 }
             }
@@ -73,7 +73,7 @@ public class LogoLoader {
         }
         
         // Fallback: create a simple text-based logo
-        log.info("Creating fallback text logo");
+        log.debug("Creating fallback text logo");
         return createFallbackLogo();
     }
     

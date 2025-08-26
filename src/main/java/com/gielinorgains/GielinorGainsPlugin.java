@@ -41,12 +41,12 @@ public class GielinorGainsPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
-		log.info("Gielinor Gains plugin started!");
+		log.debug("Gielinor Gains plugin started!");
 		
 		// Create the panel
-		log.info("Creating Gielinor Gains panel...");
+		log.debug("Creating Gielinor Gains panel...");
 		panel = new GainsPanel(apiClient, config);
-		log.info("Gielinor Gains panel created successfully");
+		log.debug("Gielinor Gains panel created successfully");
 		
 		// Create navigation button
 		BufferedImage icon = null;
@@ -58,11 +58,11 @@ public class GielinorGainsPlugin extends Plugin
 				iconStream.close();
 				log.debug("Loaded plugin icon from resource");
 			} else {
-				log.info("Icon resource not found, creating default icon");
+				log.debug("Icon resource not found, creating default icon");
 				icon = createDefaultIcon();
 			}
 		} catch (Exception e) {
-			log.info("Could not load plugin icon resource, creating default icon");
+			log.debug("Could not load plugin icon resource, creating default icon");
 			icon = createDefaultIcon();
 		}
 		
@@ -77,16 +77,16 @@ public class GielinorGainsPlugin extends Plugin
 			.panel(panel)
 			.build();
 		
-		log.info("Adding Gielinor Gains navigation button to toolbar");
+		log.debug("Adding Gielinor Gains navigation button to toolbar");
 		// Add to toolbar
 		clientToolbar.addNavigation(navButton);
-		log.info("Gielinor Gains navigation button added successfully");
+		log.debug("Gielinor Gains navigation button added successfully");
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
-		log.info("Gielinor Gains plugin stopped!");
+		log.debug("Gielinor Gains plugin stopped!");
 		
 		// Remove from toolbar
 		if (navButton != null) {
@@ -141,7 +141,7 @@ public class GielinorGainsPlugin extends Plugin
 			g2d.drawString(text, x, y);
 			
 			g2d.dispose();
-			log.info("Created default plugin icon successfully");
+			log.debug("Created default plugin icon successfully");
 			return icon;
 		} catch (Exception e) {
 			log.error("Failed to create default icon", e);

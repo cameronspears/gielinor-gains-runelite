@@ -65,7 +65,7 @@ public class GainsApiClient {
                     .addHeader("Accept", "application/json")
                     .build();
                 
-                log.info("Fetching items from: {}", url);
+                log.debug("Fetching items from: {}", url);
                 
                 try (Response response = httpClient.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
@@ -95,7 +95,7 @@ public class GainsApiClient {
                     lastFetchTime = System.currentTimeMillis();
                     lastRequestWasCached = false;
                     
-                    log.info("Successfully fetched {} items", dto.data.size());
+                    log.debug("Successfully fetched {} items", dto.data.size());
                     return filterResponse(apiResponse, limit, minScore);
                     
                 } catch (IOException e) {

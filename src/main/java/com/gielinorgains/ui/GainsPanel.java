@@ -253,7 +253,7 @@ public class GainsPanel extends PluginPanel {
                 // Progressive loading: show first batch immediately, then load the rest
                 progressivelyLoadItems(response.getData());
                 
-                log.info("Successfully started loading {} items", response.getData().size());
+                log.debug("Successfully started loading {} items", response.getData().size());
             } else {
                 String error = response.getError() != null ? response.getError() : "Unknown error";
                 statusLabel.setText("Error: " + error);
@@ -372,7 +372,7 @@ public class GainsPanel extends PluginPanel {
      * Cleanup resources when the panel is destroyed
      */
     public void shutdown() {
-        log.info("Shutting down GainsPanel");
+        log.debug("Shutting down GainsPanel");
         
         // Stop any running timers
         if (progressiveLoadTimer != null && progressiveLoadTimer.isRunning()) {
