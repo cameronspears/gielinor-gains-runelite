@@ -2,6 +2,8 @@ package com.gielinorgains;
 
 import com.gielinorgains.api.GainsApiClient;
 import com.gielinorgains.model.ApiResponse;
+import com.google.gson.Gson;
+import okhttp3.OkHttpClient;
 import org.junit.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -10,7 +12,7 @@ public class ApiIntegrationTest {
     
     @Test
     public void testApiConnection() throws Exception {
-        GainsApiClient client = new GainsApiClient();
+        GainsApiClient client = new GainsApiClient(new OkHttpClient(), new Gson());
         
         System.out.println("Testing connection to Gielinor Gains API...");
         

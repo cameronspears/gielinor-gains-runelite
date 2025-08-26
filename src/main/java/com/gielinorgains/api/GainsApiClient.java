@@ -30,15 +30,15 @@ public class GainsApiClient {
     private boolean lastRequestWasCached;
     
     @Inject
-    public GainsApiClient() {
-        this.httpClient = new OkHttpClient.Builder()
+    public GainsApiClient(OkHttpClient httpClient, Gson gson) {
+        this.httpClient = httpClient.newBuilder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(45, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
             .build();
             
-        this.gson = new GsonBuilder()
+        this.gson = gson.newBuilder()
             .setLenient()
             .create();
     }
