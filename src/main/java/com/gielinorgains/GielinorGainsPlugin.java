@@ -51,8 +51,16 @@ public class GielinorGainsPlugin extends Plugin
 		// Create navigation button
 		BufferedImage icon = null;
 		try {
-			icon = ImageUtil.loadImageResource(getClass(), "/icon.png");
-			log.debug("Loaded plugin icon from resource");
+			// Use getResourceAsStream for JAR compatibility
+			java.io.InputStream iconStream = getClass().getResourceAsStream("/icon.png");
+			if (iconStream != null) {
+				icon = javax.imageio.ImageIO.read(iconStream);
+				iconStream.close();
+				log.debug("Loaded plugin icon from resource");
+			} else {
+				log.info("Icon resource not found, creating default icon");
+				icon = createDefaultIcon();
+			}
 		} catch (Exception e) {
 			log.info("Could not load plugin icon resource, creating default icon");
 			icon = createDefaultIcon();

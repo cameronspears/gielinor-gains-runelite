@@ -27,6 +27,96 @@ This is a RuneLite plugin that integrates Gielinor Gains trading data directly i
 - `./gradlew test --info` - Verbose test output
 - `./gradlew dependencies` - Show dependency tree
 
+## Plugin Hub Submission & Updates
+
+This plugin is distributed through the RuneLite Plugin Hub. Understanding the submission and update process is critical for maintaining the plugin.
+
+### Repository Structure
+- **Main Plugin Repo**: `gielinor-gains-runelite` - Contains the actual plugin code
+- **Plugin Hub Fork**: `plugin-hub` - Fork of `runelite/plugin-hub` for submissions
+- **Plugin Definition**: `plugin-hub/plugins/gielinor-gains` - Contains repository URL and commit hash
+
+### Plugin Hub Requirements & Compliance
+
+**Licensing**: Must use BSD 2-Clause License (✅ already in place)
+
+**Code Standards**:
+- No malicious code or Jagex rule-breaking features
+- Java 11 compatibility required (avoid Java 14+ features)
+- Clean builds must pass CI checks
+- Dependencies require cryptographic verification
+
+**Plugin Metadata** (in `runelite-plugin.properties`):
+```
+displayName=Gielinor Gains
+author=cameronspears
+description=Live trading opportunities from GielinorGains.com
+tags=trading,flipping,profit,osrs,gp
+plugins=com.gielinorgains.GielinorGainsPlugin
+```
+
+**Icon**: Maximum 48x72px PNG at repository root (✅ already optimized)
+
+### Update Process Workflow
+
+**When making changes to the plugin:**
+
+1. **Develop & Test** in main plugin repository:
+   ```bash
+   ./gradlew test -ea           # Run tests with assertions
+   ./gradlew shadowJar          # Build for distribution  
+   ./gradlew clean build        # Verify clean build passes
+   ```
+
+2. **Commit & Push** changes to main repo:
+   ```bash
+   git add .
+   git commit -m "description of changes"
+   git push origin master
+   ```
+
+3. **Get Full Commit Hash**:
+   ```bash
+   git rev-parse HEAD    # Returns 40-character hash
+   ```
+
+4. **Update Plugin Hub Definition**:
+   - Navigate to plugin-hub repository: `/private/tmp/plugin-hub`
+   - Edit `plugins/gielinor-gains` file:
+     ```
+     repository=https://github.com/cameronspears/gielinor-gains-runelite.git
+     commit=[40-character-hash-from-step-3]
+     ```
+
+5. **Commit & Push Plugin Hub Update**:
+   ```bash
+   cd /private/tmp/plugin-hub
+   git add plugins/gielinor-gains
+   git commit -m "update gielinor-gains to [short-hash]"
+   git push origin add-gielinor-gains-plugin
+   ```
+
+6. **Monitor PR**: Check CI status and Plugin Hub validation
+
+### Testing Commands for Plugin Hub
+- `./gradlew test -ea` - Run with assertions enabled (required for plugin tests)
+- `./gradlew shadowJar` - Build JAR with all dependencies for distribution
+- `./gradlew --write-verification-metadata sha256` - Update dependency verification (if adding deps)
+
+### CI/Build Validation
+- ✅ Build must pass: `.github/workflows/build.yml`
+- ✅ Plugin Hub checks must pass (no "Changes are needed")  
+- ✅ No build errors or dependency issues
+- ✅ Java 11 compatibility maintained
+
+### Common Issues & Solutions
+- **Build failures**: Check for Java 11 compatibility issues
+- **Dependency verification**: New dependencies need cryptographic verification
+- **Plugin Hub checks**: Ensure no rule-breaking or malicious code patterns
+- **Client version outdated**: Set `runeLiteVersion = 'latest.release'` in build.gradle
+
+**IMPORTANT**: Always update the commit hash in plugin-hub after ANY changes to the main repository. The Plugin Hub builds from the exact commit specified, not the latest commit.
+
 ## Project Structure Deep Dive
 
 ### Core Plugin Files
