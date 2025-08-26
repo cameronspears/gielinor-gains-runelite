@@ -87,7 +87,7 @@ public class GielinorGainsPlugin extends Plugin
 		
 		// Cleanup
 		if (panel != null) {
-			// Panel cleanup will be handled by the panel itself
+			panel.shutdown();
 			panel = null;
 		}
 	}

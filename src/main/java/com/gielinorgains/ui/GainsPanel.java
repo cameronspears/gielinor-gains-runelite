@@ -32,6 +32,7 @@ public class GainsPanel extends PluginPanel {
     private JLabel websiteLink;
     private JProgressBar loadingBar;
     private long loadStartTime;
+    private Timer progressiveLoadTimer;
     
     @Inject
     public GainsPanel(GainsApiClient apiClient, GielinorGainsConfig config) {
@@ -289,8 +290,13 @@ public class GainsPanel extends PluginPanel {
         final int batchSize = 40;
         final int delay = 80; // milliseconds between batches
         
-        Timer progressiveTimer = new Timer(delay, null);
-        progressiveTimer.addActionListener(new java.awt.event.ActionListener() {
+        // Stop any existing progressive timer
+        if (progressiveLoadTimer != null && progressiveLoadTimer.isRunning()) {
+            progressiveLoadTimer.stop();
+        }
+        
+        progressiveLoadTimer = new Timer(delay, null);
+        progressiveLoadTimer.addActionListener(new java.awt.event.ActionListener() {
             private int currentIndex = startIndex;
             
             @Override
@@ -309,7 +315,7 @@ public class GainsPanel extends PluginPanel {
                 
                 // Stop when all items are loaded
                 if (currentIndex >= allItems.size()) {
-                    progressiveTimer.stop();
+                    progressiveLoadTimer.stop();
                     
                     // Final status update
                     long elapsedMs = System.currentTimeMillis() - loadStartTime;
@@ -324,7 +330,7 @@ public class GainsPanel extends PluginPanel {
             }
         });
         
-        progressiveTimer.start();
+        progressiveLoadTimer.start();
     }
     
     private Void handleApiError(Throwable throwable) {
@@ -360,6 +366,30 @@ public class GainsPanel extends PluginPanel {
         } catch (Exception e) {
             log.error("Failed to open website", e);
         }
+    }
+    
+    /**
+     * Cleanup resources when the panel is destroyed
+     */
+    public void shutdown() {
+        log.info("Shutting down GainsPanel");
+        
+        // Stop any running timers
+        if (progressiveLoadTimer != null && progressiveLoadTimer.isRunning()) {
+            progressiveLoadTimer.stop();
+        }
+        
+        // Shutdown icon cache to prevent resource leaks
+        if (iconCache != null) {
+            iconCache.shutdown();
+        }
+        
+        // Cleanup card grid panel (this will handle its own loadingTipTimer)
+        if (cardGridPanel != null) {
+            cardGridPanel.shutdown();
+        }
+        
+        log.debug("GainsPanel shutdown completed");
     }
     
 }

@@ -1,214 +1,141 @@
 # Gielinor Gains RuneLite Plugin
 
-A companion RuneLite plugin that brings the powerful Gielinor Gains trading analysis directly into your OSRS client. View real-time profitable trading opportunities without switching between applications.
+A RuneLite plugin that integrates Gielinor Gains trading data directly into the OSRS client.
 
 ![Plugin Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Java](https://img.shields.io/badge/java-11-orange)
 ![RuneLite](https://img.shields.io/badge/runelite-compatible-green)
 
-## 🚀 Features
+## Features
+- Real-time trading opportunities from Gielinor Gains API
+- Card-based grid interface with individual item displays
+- Score-based ranking (0-5 scale) with color-coded indicators
+- Buy/sell prices, profit margins, and recommended quantities
+- Click item names to open OSRS Wiki pages
+- Configurable refresh intervals, score thresholds, and icon display
+- Item icon caching with loading animations
+- 90-second cache synchronization with web app
 
-- **📊 Live Trading Data**: Real-time profitable trading opportunities from Gielinor Gains
-- **⭐ Score-Based Ranking**: Items sorted by quality score (0-5 scale) with intuitive color coding
-- **💰 Profit Analysis**: Instant buy/sell prices, profit margins, and recommended quantities
-- **🎯 Interactive Interface**: Double-click items to open their OSRS Wiki pages
-- **⚙️ Highly Configurable**: Customize refresh intervals, item limits, and score thresholds
-- **🖼️ Smart Icon System**: Displays item icons with intelligent caching for smooth performance
-- **🔄 Auto-Refresh**: Synchronized with web app's 90-second cache for consistent data
+## Installation
 
-## 📋 Table Columns
+### Quick Install
+1. Download `gielinor-gains-runelite-1.0.0-all.jar` from releases
+2. Open RuneLite and enable Developer mode in Settings > Configuration > RuneLite
+3. Go to Plugin Hub and click "Load Plugin"
+4. Select the downloaded JAR file
+5. Plugin appears in sidebar with blue "GG" icon
 
-| Column | Description |
-|--------|-------------|
-| **Item** | Item name with icon (toggleable) |
-| **Score** | Quality score (0-5) with color coding |
-| **Buy/Sell** | Price range for trading |
-| **Profit** | Expected profit per item |
-| **Qty** | Recommended quantity to trade |
-
-## 📦 Installation
-
-### Method 1: Quick Install (Recommended)
-1. Download the latest `gielinor-gains-runelite-1.0.0-all.jar` from releases
-2. Open RuneLite
-3. Navigate to Settings (⚙️) → Configuration → RuneLite → Enable "Developer mode"
-4. Go to the Plugin Hub and click "Load Plugin"
-5. Select the downloaded JAR file
-6. The plugin will appear in your sidebar with a blue "GG" icon
-
-### Method 2: Build from Source
+### Build from Source
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd gielinor-gains-runelite
-
-# Build the plugin
 ./gradlew clean shadowJar
-
-# The plugin JAR will be in build/libs/
-# Load gielinor-gains-runelite-1.0.0-all.jar in RuneLite
+# Load build/libs/gielinor-gains-runelite-1.0.0-all.jar in RuneLite
 ```
 
-## 🎮 Usage
+## Usage
 
-1. **Launch**: After installation, look for the blue "GG" icon in your RuneLite sidebar
-2. **View Data**: Click the icon to open the trading opportunities panel
-3. **Interact**: Double-click any item name to open its OSRS Wiki page
-4. **Refresh**: Use the "Refresh" button or wait for automatic updates (90s interval)
-5. **Configure**: Right-click the plugin in settings to customize behavior
+1. Click the "GG" icon in RuneLite sidebar to open the panel
+2. View trading opportunities in card format
+3. Click item names to open OSRS Wiki pages
+4. Use "Refresh" button or wait for automatic updates (90s)
+5. Configure settings through RuneLite Configuration panel
 
-## ⚙️ Configuration Options
-
-Access these settings through RuneLite's Configuration panel:
+## Configuration
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| **Refresh Interval** | 90 seconds | How often to fetch new data from API |
-| **Items to Display** | 50 | Maximum number of items to show in table |
-| **Minimum Score** | 0.0 | Only show items with score >= this value |
-| **Show Item Icons** | Enabled | Display item icons in the table |
+| Refresh Interval | 90 seconds | Data fetch frequency |
+| Minimum Score | 0.0 | Filter items below this score |
+| Show Item Icons | Enabled | Display item icons in cards |
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 src/main/java/com/gielinorgains/
-├── GielinorGainsPlugin.java      # Main plugin class & RuneLite integration
+├── GielinorGainsPlugin.java      # Main plugin class
 ├── GielinorGainsConfig.java      # Configuration interface
 ├── api/
-│   └── GainsApiClient.java       # HTTP client with caching & error handling
+│   └── GainsApiClient.java       # HTTP client with caching
 ├── model/
-│   ├── GainsItem.java           # Item data model matching API schema
-│   └── ApiResponse.java         # API response wrapper with success/error states
+│   ├── GainsItem.java           # Item data model
+│   └── ApiResponse.java         # API response wrapper
 ├── ui/
-│   ├── GainsPanel.java          # Main UI panel with sortable table
-│   └── IconCache.java           # Async icon loading with memory management
+│   ├── GainsPanel.java          # Main UI panel
+│   ├── CardGridPanel.java       # Card grid container
+│   ├── ItemCardPanel.java       # Individual item cards
+│   ├── IconCache.java           # Icon loading and caching
+│   └── LogoLoader.java          # Logo loading utilities
 └── util/
-    └── ScoreFormatter.java      # Score display utilities & color coding
+    └── ScoreFormatter.java      # Score display utilities
 ```
 
-## 🌐 Data Source & API
+## API Integration
 
 **Endpoint**: `https://gielinorgains.com/api/items`
 
-The plugin fetches comprehensive trading data including:
+Data includes:
 - Item names and OSRS Wiki icons
-- AI-generated quality scores (0-5 scale using technical indicators)
-- Buy/sell price recommendations with tax considerations
+- Quality scores (0-5 scale using technical indicators)
+- Buy/sell price recommendations
 - Profit calculations and ROI analysis
-- Recommended trading quantities based on volume analysis
+- Trading quantities based on volume analysis
 - Market volume and liquidity data
 
-**Data Flow**: OSRS Wiki API → Gielinor Gains Analysis → RuneLite Plugin
-
-## 🛠️ Development
+## Development
 
 ### Prerequisites
-- Java 11 or higher
+- Java 11+
 - Gradle 8.0+
 - RuneLite development environment
 
 ### Tech Stack
-- **Language**: Java 11 (compatible with RuneLite)
-- **Build System**: Gradle with shadow plugin
-- **HTTP Client**: OkHttp 4.12.0 for API requests
-- **JSON Parsing**: Gson 2.10.1 for response handling
-- **Code Generation**: Lombok for boilerplate reduction
-- **UI Framework**: Swing (RuneLite standard)
+- Java 11 (RuneLite compatibility)
+- Gradle with shadow plugin
+- OkHttp 4.12.0 for HTTP requests
+- Gson 2.10.1 for JSON parsing
+- Lombok for code generation
+- Swing UI framework
 
-### Building
+### Commands
 ```bash
-# Clean build
-./gradlew clean build
-
-# Build with dependencies (for plugin distribution)
-./gradlew shadowJar
-
-# Run tests
-./gradlew test
-
-# Continuous development
-./gradlew --continuous build
+./gradlew clean build          # Standard build
+./gradlew shadowJar           # Build with dependencies
+./gradlew test                # Run tests
+./gradlew --continuous build  # Development mode
 ```
 
-### Testing
-```bash
-# Run all tests
-./gradlew test
+## Troubleshooting
 
-# Run specific test suites
-./gradlew test --tests "com.gielinorgains.ApiIntegrationTest"
-./gradlew test --tests "com.gielinorgains.JsonParsingTest"
-```
+### Plugin Not Appearing
+- Enable Developer mode in RuneLite settings
+- Load the `-all.jar` file (includes dependencies)
+- Restart RuneLite after installation
+- Check RuneLite console for errors
 
-## 🐛 Troubleshooting
-
-### Plugin Not Appearing in Sidebar
-- ✅ Ensure "Developer mode" is enabled in RuneLite settings
-- ✅ Check that you loaded the `-all.jar` file (includes dependencies)
-- ✅ Restart RuneLite after installing the plugin
-- ✅ Look for errors in RuneLite's console/logs
-
-### Network/Timeout Errors
-- ✅ Check your internet connection
-- ✅ Verify https://gielinorgains.com is accessible
-- ✅ Increase timeout in configuration if on slow connection
-- ✅ Check firewall/antivirus blocking RuneLite's network access
+### Network Issues
+- Check internet connection
+- Verify https://gielinorgains.com accessibility
+- Check firewall/antivirus blocking RuneLite network access
 
 ### Data Not Loading
-- ✅ Click the "Refresh" button manually
-- ✅ Check if Gielinor Gains website is online
-- ✅ Verify minimum score filter isn't too restrictive
-- ✅ Look for error messages in the status bar
+- Click "Refresh" button manually
+- Verify Gielinor Gains website is online
+- Check minimum score filter setting
+- Look for error messages in status bar
 
 ### Performance Issues
-- ✅ Disable item icons if experiencing lag
-- ✅ Reduce "Items to Display" count
-- ✅ Increase refresh interval to reduce API calls
+- Disable item icons if experiencing lag
+- Increase refresh interval to reduce API calls
 
-## 🔄 Version History
-
-### v1.0.0 (Current)
-- ✅ Initial release with core functionality
-- ✅ API integration with proper error handling
-- ✅ Configurable table with color-coded scores
-- ✅ Icon caching system for optimal performance
-- ✅ Fixed JSON parsing for decimal volume values
-- ✅ Improved network timeouts and SSL handling
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Follow Java 11 compatibility requirements
-4. Add tests for new functionality
-5. Ensure `./gradlew build` passes
-6. Submit a pull request
-
-## 📝 Known Issues
+## Known Issues
 
 - Some item icons may load slowly on first viewing (cached afterwards)
-- API rate limiting may occur with very frequent manual refreshes
-- Plugin requires internet connection for real-time data
+- API rate limiting may occur with frequent manual refreshes
+- Requires internet connection for data
 
-## 🔮 Future Enhancements
+## License
 
-- 📊 Integration with Gielinor Gains Planner feature
-- 📈 Price history charts and trend analysis
-- 🔔 Profit alerts and notifications
-- 📱 Mobile-friendly companion features
-- 🎨 Customizable themes and layouts
+This project is licensed under the BSD 2-Clause License. See the [LICENSE](LICENSE) file for details.
 
-## 📄 License
-
-This plugin is for educational and personal use only. It connects to the free Gielinor Gains service and respects all rate limits and terms of service.
-
-## 🙏 Acknowledgments
-
-- **Gielinor Gains Team** for the excellent trading analysis platform
-- **RuneLite Developers** for the robust plugin framework
-- **OSRS Wiki** for providing comprehensive item data
-- **OSRS Community** for feedback and support
-
----
-
-*Happy trading! 💰*
+Copyright (c) 2024, Cameron Spears. All rights reserved.

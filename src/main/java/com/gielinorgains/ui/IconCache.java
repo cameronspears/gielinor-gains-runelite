@@ -28,6 +28,7 @@ public class IconCache {
     
     // Batch repaint optimization
     private final Set<Runnable> pendingCallbacks = ConcurrentHashMap.newKeySet();
+    private final Object batchLock = new Object();
     private volatile boolean batchRepaintScheduled = false;
     
     public IconCache() {
@@ -164,31 +165,35 @@ public class IconCache {
         
         pendingCallbacks.add(callback);
         
-        if (!batchRepaintScheduled) {
-            batchRepaintScheduled = true;
-            
-            // Schedule the batch execution
-            Timer timer = new Timer(BATCH_REPAINT_DELAY_MS, e -> {
-                SwingUtilities.invokeLater(() -> {
-                    // Execute all pending callbacks
-                    Set<Runnable> callbacks = Set.copyOf(pendingCallbacks);
-                    pendingCallbacks.clear();
-                    batchRepaintScheduled = false;
-                    
-                    // Execute callbacks
-                    for (Runnable callback_ : callbacks) {
-                        try {
-                            callback_.run();
-                        } catch (Exception ex) {
-                            log.warn("Error executing icon load callback", ex);
+        synchronized (batchLock) {
+            if (!batchRepaintScheduled) {
+                batchRepaintScheduled = true;
+                
+                // Schedule the batch execution
+                Timer timer = new Timer(BATCH_REPAINT_DELAY_MS, e -> {
+                    SwingUtilities.invokeLater(() -> {
+                        synchronized (batchLock) {
+                            // Execute all pending callbacks
+                            Set<Runnable> callbacks = Set.copyOf(pendingCallbacks);
+                            pendingCallbacks.clear();
+                            batchRepaintScheduled = false;
+                            
+                            // Execute callbacks
+                            for (Runnable callback_ : callbacks) {
+                                try {
+                                    callback_.run();
+                                } catch (Exception ex) {
+                                    log.warn("Error executing icon load callback", ex);
+                                }
+                            }
+                            
+                            log.debug("Executed batch of {} icon load callbacks", callbacks.size());
                         }
-                    }
-                    
-                    log.debug("Executed batch of {} icon load callbacks", callbacks.size());
+                    });
                 });
-            });
-            timer.setRepeats(false);
-            timer.start();
+                timer.setRepeats(false);
+                timer.start();
+            }
         }
     }
     

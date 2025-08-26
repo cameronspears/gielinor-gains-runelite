@@ -344,6 +344,26 @@ public class CardGridPanel extends JPanel implements Scrollable {
         }
     }
     
+    /**
+     * Cleanup resources when the panel is destroyed
+     */
+    public void shutdown() {
+        log.info("Shutting down CardGridPanel");
+        
+        // Stop any running loading tip timer
+        if (loadingTipTimer != null && loadingTipTimer.isRunning()) {
+            loadingTipTimer.stop();
+            loadingTipTimer = null;
+        }
+        
+        // Clear references
+        loadingTipLabel = null;
+        cardPanels.clear();
+        items.clear();
+        
+        log.debug("CardGridPanel shutdown completed");
+    }
+    
     
     // Scrollable interface implementation for better scrolling behavior
     @Override
