@@ -1,33 +1,22 @@
 # Gielinor Gains RuneLite Plugin
 
-A RuneLite plugin that brings [GielinorGains.com](https://gielinorgains.com) trading opportunities directly into your OSRS client. View profitable Grand Exchange trades without switching between the game and your browser.
+A RuneLite plugin that brings [GielinorGains.com](https://gielinorgains.com) trading opportunities directly into your OSRS client. Completely free with intelligent trading tools - no subscriptions, just profitable Grand Exchange opportunities.
 
-## How it Works
+## Score System
 
-The Gielinor Gains plugin analyzes OSRS Wiki market data to identify profitable trading opportunities using a sophisticated scoring algorithm that focuses on contrarian signals and oversold conditions. Unlike other trading platforms, it's completely free with no paywalls, using a "positive profit factor" approach where wins significantly outweigh losses over time.
+Higher scores indicate better profit opportunities with executable trades. Our algorithm analyzes technical indicators (RSI, ROC, MACD), trading volume, market depth, and contrarian signals to score items 0-5.
 
-The plugin displays trading opportunities in a card grid format, ranking them by score (higher = better opportunity) through intelligent analysis:
+Scores currently range 2.4-3.0, but small differences matter significantly. Our algorithm focuses on asymmetric opportunities where wins outweigh losses - even moderate accuracy can yield exceptional returns.
 
-**Data Collection**
-- Fetches latest prices and volumes from OSRS Wiki API
-- Analyzes 5-minute timeseries data covering ~30 hours of trading history
-- Updates every 90 seconds with smart caching for optimal performance
+Focus on relative position in the results table. A 0.1 point difference can mean 10x more trading volume, better profit margins, or the difference between oversold (RSI 25) and neutral (RSI 50) conditions.
 
-**Scoring Algorithm (0-5 Scale)**
-- **Technical Indicators**: RSI and ROC analysis to identify oversold conditions and momentum reversals
-- **Volume Analysis**: Advanced trader activity scoring evaluates market depth, buy/sell balance, and execution feasibility while filtering whale manipulation
-- **Risk-Adjusted Returns**: Calculates volatility-adjusted ROI using standard deviation, ATR, and Bollinger Bands for capital efficiency
-- **Contrarian Signals**: Identifies oversold bounce opportunities through RSI < 30, negative ROC momentum, and EMA trend reversals
+## Smart Offers
 
-**Score Interpretation**
-- Scores typically range from 2.4-3.0 (higher = better opportunity)
-- Small score differences represent significant trading advantages
-- Algorithm focuses on asymmetric opportunities where wins outweigh losses
+No guesswork - the system finds the optimal balance between profit margin and execution speed for current market conditions. Our dynamic pricing calculates buy/sell offers automatically using latest prices with smart offsets (0.08-2%) based on liquidity, technical conditions, and volatility. All calculations include the 2% GE tax.
 
-**Dynamic Pricing**
-- Automatically calculates optimal buy/sell prices based on real-time conditions
-- Adapts spreads based on market liquidity and volatility
-- Accounts for Grand Exchange tax in all profit calculations
+## Quantities
+
+Get realistic quantity suggestions that actually execute. Recommendations are calculated conservatively based on actual trading volume with confidence scoring, automatically adjusting for market liquidity to avoid inflated suggestions.
 
 ## Screenshots
 
@@ -44,15 +33,6 @@ The plugin displays trading opportunities in a card grid format, ranking them by
 3. Install and enable the plugin
 4. Find the Gielinor Gains icon in your sidebar
 
-## Features
-
-- **Latest Market Data**: On-demand access to current trading opportunities from GielinorGains.com
-- **Smart Scoring**: Multi-factor algorithm ranking opportunities from 0-5
-- **Dynamic Pricing**: Automated buy/sell price calculations with market-adaptive spreads
-- **Volume Analysis**: Trading quantity recommendations based on actual market activity
-- **Item Icons**: Visual item identification with automatic loading and caching
-- **Filtering**: Configurable minimum score threshold
-- **OSRS Wiki Integration**: Click items to view detailed wiki information
 
 ## Support
 
