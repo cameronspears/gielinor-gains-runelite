@@ -11,9 +11,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
-import net.runelite.client.util.ImageUtil;
 
 import java.awt.image.BufferedImage;
+import java.util.concurrent.ScheduledExecutorService;
 
 @Slf4j
 @PluginDescriptor(
@@ -35,6 +35,9 @@ public class GielinorGainsPlugin extends Plugin
 	@Inject
 	private GainsApiClient apiClient;
 
+	@Inject
+	private ScheduledExecutorService executorService;
+
 	private GainsPanel panel;
 	private NavigationButton navButton;
 
@@ -45,7 +48,7 @@ public class GielinorGainsPlugin extends Plugin
 		
 		// Create the panel
 		log.debug("Creating Gielinor Gains panel...");
-		panel = new GainsPanel(apiClient, config);
+		panel = new GainsPanel(apiClient, config, executorService);
 		log.debug("Gielinor Gains panel created successfully");
 		
 		// Create navigation button
@@ -54,7 +57,9 @@ public class GielinorGainsPlugin extends Plugin
 			// Use getResourceAsStream for JAR compatibility
 			java.io.InputStream iconStream = getClass().getResourceAsStream("/icon.png");
 			if (iconStream != null) {
-				icon = javax.imageio.ImageIO.read(iconStream);
+				synchronized (javax.imageio.ImageIO.class) {
+					icon = javax.imageio.ImageIO.read(iconStream);
+				}
 				iconStream.close();
 				log.debug("Loaded plugin icon from resource");
 			} else {

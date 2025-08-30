@@ -39,7 +39,10 @@ public class LogoLoader {
             // Try to load the logo from resources
             InputStream logoStream = LogoLoader.class.getResourceAsStream("/logo-white.png");
             if (logoStream != null) {
-                BufferedImage originalLogo = ImageIO.read(logoStream);
+                BufferedImage originalLogo;
+                synchronized (ImageIO.class) {
+                    originalLogo = ImageIO.read(logoStream);
+                }
                 logoStream.close();
                 
                 if (originalLogo != null) {

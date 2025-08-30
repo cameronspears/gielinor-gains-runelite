@@ -11,6 +11,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class CardGridPanel extends JPanel implements Scrollable {
@@ -18,6 +21,7 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private static final int CARD_WIDTH = 190;
     private static final int CARD_HEIGHT = 180;
     private final IconCache iconCache;
+    private final ScheduledExecutorService executorService;
     private List<GainsItem> items = new ArrayList<>();
     private final List<ItemCardPanel> cardPanels = new ArrayList<>();
     private String sortBy = "score";
@@ -25,11 +29,12 @@ public class CardGridPanel extends JPanel implements Scrollable {
     private JComponent headerComponent;
     private JComponent statusComponent;
     private boolean loading = true;
-    private Timer loadingTipTimer;
+    private ScheduledFuture<?> loadingTipTask;
     private JLabel loadingTipLabel;
     
-    public CardGridPanel(IconCache iconCache, GielinorGainsConfig config) {
+    public CardGridPanel(IconCache iconCache, GielinorGainsConfig config, ScheduledExecutorService executorService) {
         this.iconCache = iconCache;
+        this.executorService = executorService;
         
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -93,8 +98,8 @@ public class CardGridPanel extends JPanel implements Scrollable {
      */
     public void setLoading(boolean loading) {
         this.loading = loading;
-        if (!loading && loadingTipTimer != null) {
-            loadingTipTimer.stop();
+        if (!loading && loadingTipTask != null) {
+            loadingTipTask.cancel(false);
         }
         updateLayout();
     }
@@ -282,8 +287,8 @@ public class CardGridPanel extends JPanel implements Scrollable {
     }
     
     private void startLoadingTips() {
-        if (loadingTipTimer != null) {
-            loadingTipTimer.stop();
+        if (loadingTipTask != null) {
+            loadingTipTask.cancel(false);
         }
         
         String[] tips = {
@@ -296,22 +301,23 @@ public class CardGridPanel extends JPanel implements Scrollable {
         // Cumulative timing: when each message should appear
         int[] showAtMs = {0, 3000, 9000, 15000}; // 0s, 3s, 9s, 15s
         
-        loadingTipTimer = new Timer(500, new java.awt.event.ActionListener() {
-            private final long startTime = System.currentTimeMillis();
-            private int currentTip = 0;
-            
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
+        final long startTime = System.currentTimeMillis();
+        final java.util.concurrent.atomic.AtomicInteger currentTip = new java.util.concurrent.atomic.AtomicInteger(0);
+        
+        loadingTipTask = executorService.scheduleAtFixedRate(() -> {
+            SwingUtilities.invokeLater(() -> {
                 if (loadingTipLabel == null || !loading) {
-                    loadingTipTimer.stop();
+                    if (loadingTipTask != null) {
+                        loadingTipTask.cancel(false);
+                    }
                     return;
                 }
                 
                 long elapsed = System.currentTimeMillis() - startTime;
                 
                 // Check if we should advance to the next tip
-                int nextTip = currentTip;
-                for (int i = currentTip + 1; i < showAtMs.length; i++) {
+                int nextTip = currentTip.get();
+                for (int i = nextTip + 1; i < showAtMs.length; i++) {
                     if (elapsed >= showAtMs[i]) {
                         nextTip = i;
                     } else {
@@ -320,19 +326,17 @@ public class CardGridPanel extends JPanel implements Scrollable {
                 }
                 
                 // Update the message if we've advanced
-                if (nextTip != currentTip) {
-                    currentTip = nextTip;
-                    loadingTipLabel.setText(tips[currentTip]);
+                if (nextTip != currentTip.get()) {
+                    currentTip.set(nextTip);
+                    loadingTipLabel.setText(tips[nextTip]);
                 }
                 
                 // Stop after showing the final message for a bit
-                if (currentTip == tips.length - 1 && elapsed >= 19000) {
-                    loadingTipTimer.stop();
+                if (currentTip.get() == tips.length - 1 && elapsed >= 19000) {
+                    loadingTipTask.cancel(false);
                 }
-            }
-        });
-        
-        loadingTipTimer.start();
+            });
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
     
     private void openWebsite() {
@@ -350,10 +354,10 @@ public class CardGridPanel extends JPanel implements Scrollable {
     public void shutdown() {
         log.debug("Shutting down CardGridPanel");
         
-        // Stop any running loading tip timer
-        if (loadingTipTimer != null && loadingTipTimer.isRunning()) {
-            loadingTipTimer.stop();
-            loadingTipTimer = null;
+        // Cancel any running loading tip task
+        if (loadingTipTask != null && !loadingTipTask.isDone()) {
+            loadingTipTask.cancel(false);
+            loadingTipTask = null;
         }
         
         // Clear references

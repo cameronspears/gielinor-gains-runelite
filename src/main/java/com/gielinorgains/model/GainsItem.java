@@ -4,6 +4,15 @@ import lombok.Data;
 import lombok.Builder;
 import java.util.List;
 
+/**
+ * Model for trading opportunities from Gielinor Gains API.
+ *
+ * SECURITY NOTE: All string fields from the API are used safely:
+ * - 'name' and 'id': Only displayed in UI or URL-encoded for wiki links (no HTML rendering)
+ * - 'icon' and 'detailIcon': Only used as URLs for image loading 
+ * - No string values are used in SQL queries, command execution, or script evaluation
+ * - All numeric values are properly typed (Double for decimal values from API)
+ */
 @Data
 @Builder
 public class GainsItem {
@@ -42,15 +51,4 @@ public class GainsItem {
         return String.valueOf(price);
     }
     
-    public String getFormattedProfit() {
-        return getFormattedPrice(profit);
-    }
-    
-    public String getScoreDisplay() {
-        return String.format("%.1f", score);
-    }
-    
-    public String getPriceRange() {
-        return getFormattedPrice(adjustedLowPrice) + " - " + getFormattedPrice(adjustedHighPrice);
-    }
 }

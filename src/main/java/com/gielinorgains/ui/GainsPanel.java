@@ -15,6 +15,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class GainsPanel extends PluginPanel {
@@ -23,6 +26,7 @@ public class GainsPanel extends PluginPanel {
     private final GainsApiClient apiClient;
     private final GielinorGainsConfig config;
     private final IconCache iconCache;
+    private final ScheduledExecutorService executorService;
     
     private CardGridPanel cardGridPanel;
     private JButton refreshButton;
@@ -32,13 +36,14 @@ public class GainsPanel extends PluginPanel {
     private JLabel websiteLink;
     private JProgressBar loadingBar;
     private long loadStartTime;
-    private Timer progressiveLoadTimer;
+    private ScheduledFuture<?> progressiveLoadTask;
     
     @Inject
-    public GainsPanel(GainsApiClient apiClient, GielinorGainsConfig config) {
+    public GainsPanel(GainsApiClient apiClient, GielinorGainsConfig config, ScheduledExecutorService executorService) {
         this.apiClient = apiClient;
         this.config = config;
         this.iconCache = new IconCache();
+        this.executorService = executorService;
         
         setLayout(new BorderLayout());
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -54,7 +59,7 @@ public class GainsPanel extends PluginPanel {
         JPanel statusPanel = createStatusPanel();
 
         // Card grid panel (will host header + cards + status and scroll as one)
-        cardGridPanel = new CardGridPanel(iconCache, config);
+        cardGridPanel = new CardGridPanel(iconCache, config, executorService);
         cardGridPanel.setHeaderAndStatus(headerPanel, statusPanel);
         // Add directly; let RuneLite's outer scroll handle scrolling
         add(cardGridPanel, BorderLayout.CENTER);
@@ -290,18 +295,18 @@ public class GainsPanel extends PluginPanel {
         final int batchSize = 40;
         final int delay = 80; // milliseconds between batches
         
-        // Stop any existing progressive timer
-        if (progressiveLoadTimer != null && progressiveLoadTimer.isRunning()) {
-            progressiveLoadTimer.stop();
+        // Cancel any existing progressive task
+        if (progressiveLoadTask != null && !progressiveLoadTask.isDone()) {
+            progressiveLoadTask.cancel(false);
         }
         
-        progressiveLoadTimer = new Timer(delay, null);
-        progressiveLoadTimer.addActionListener(new java.awt.event.ActionListener() {
-            private int currentIndex = startIndex;
-            
-            @Override
-            public void actionPerformed(java.awt.event.ActionEvent e) {
-                int endIndex = Math.min(currentIndex + batchSize, allItems.size());
+        // Use AtomicInteger for thread-safe access
+        final java.util.concurrent.atomic.AtomicInteger currentIndex = new java.util.concurrent.atomic.AtomicInteger(startIndex);
+        
+        progressiveLoadTask = executorService.scheduleAtFixedRate(() -> {
+            SwingUtilities.invokeLater(() -> {
+                int index = currentIndex.get();
+                int endIndex = Math.min(index + batchSize, allItems.size());
                 
                 // Create progressive list with items up to current batch
                 List<GainsItem> progressiveItems = allItems.subList(0, endIndex);
@@ -311,11 +316,11 @@ public class GainsPanel extends PluginPanel {
                 statusLabel.setText(String.format("Loading items... (%d of %d)", 
                     endIndex, allItems.size()));
                 
-                currentIndex = endIndex;
+                currentIndex.set(endIndex);
                 
                 // Stop when all items are loaded
-                if (currentIndex >= allItems.size()) {
-                    progressiveLoadTimer.stop();
+                if (endIndex >= allItems.size()) {
+                    progressiveLoadTask.cancel(false);
                     
                     // Final status update
                     long elapsedMs = System.currentTimeMillis() - loadStartTime;
@@ -327,10 +332,8 @@ public class GainsPanel extends PluginPanel {
                     
                     log.debug("Progressive loading completed: {} items", allItems.size());
                 }
-            }
-        });
-        
-        progressiveLoadTimer.start();
+            });
+        }, 0, delay, TimeUnit.MILLISECONDS);
     }
     
     private Void handleApiError(Throwable throwable) {
@@ -374,9 +377,9 @@ public class GainsPanel extends PluginPanel {
     public void shutdown() {
         log.debug("Shutting down GainsPanel");
         
-        // Stop any running timers
-        if (progressiveLoadTimer != null && progressiveLoadTimer.isRunning()) {
-            progressiveLoadTimer.stop();
+        // Cancel any running progressive load task
+        if (progressiveLoadTask != null && !progressiveLoadTask.isDone()) {
+            progressiveLoadTask.cancel(false);
         }
         
         // Shutdown icon cache to prevent resource leaks

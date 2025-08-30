@@ -102,7 +102,10 @@ public class IconCache {
             log.debug("Loading icon from: {}", iconUrl);
             
             URL url = new URL(iconUrl);
-            BufferedImage image = ImageIO.read(url);
+            BufferedImage image;
+            synchronized (ImageIO.class) {
+                image = ImageIO.read(url);
+            }
             
             if (image != null) {
                 // Calculate dimensions that preserve aspect ratio within ICON_SIZE bounds
@@ -169,8 +172,8 @@ public class IconCache {
             if (!batchRepaintScheduled) {
                 batchRepaintScheduled = true;
                 
-                // Schedule the batch execution
-                Timer timer = new Timer(BATCH_REPAINT_DELAY_MS, e -> {
+                // Schedule the batch execution using existing executor
+                cleanupExecutor.schedule(() -> {
                     SwingUtilities.invokeLater(() -> {
                         synchronized (batchLock) {
                             // Execute all pending callbacks
@@ -190,9 +193,7 @@ public class IconCache {
                             log.debug("Executed batch of {} icon load callbacks", callbacks.size());
                         }
                     });
-                });
-                timer.setRepeats(false);
-                timer.start();
+                }, BATCH_REPAINT_DELAY_MS, TimeUnit.MILLISECONDS);
             }
         }
     }
